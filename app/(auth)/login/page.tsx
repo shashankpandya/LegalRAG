@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { LoginSchema, type LoginInput } from "@/lib/api/schemas/auth";
+import { LoginSchema } from "@/lib/api/schemas/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,12 +49,21 @@ export default function LoginPage() {
     });
 
     if (error) {
-      toast.error(error.message);
+      // User-friendly error messages
+      if (error.message.includes("Invalid login")) {
+        toast.error("Invalid email or password. Please try again.");
+      } else if (error.message.includes("Email not confirmed")) {
+        toast.error("Please confirm your email before signing in. Check your inbox.");
+      } else if (error.message.includes("rate limit")) {
+        toast.error("Too many login attempts. Please wait a few minutes.");
+      } else {
+        toast.error(error.message);
+      }
       setLoading(false);
       return;
     }
 
-    router.push("/");
+    router.push("/dashboard");
     router.refresh();
   }
 
