@@ -51,6 +51,7 @@ export default function SignupPage() {
         data: {
           full_name: result.data.fullName,
         },
+        emailRedirectTo: `${window.location.origin}/api/auth/callback`,
       },
     });
 
