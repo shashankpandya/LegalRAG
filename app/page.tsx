@@ -79,7 +79,7 @@ export default async function LandingPage() {
               <FileText className="h-5 w-5 text-primary mb-2" />
               <h3 className="text-sm font-semibold">Upload your docs</h3>
               <p className="text-xs text-muted-foreground mt-1">
-                Add your own PDFs. They're searchable only by you — fully private.
+                Add your own PDFs. They&apos;re searchable only by you — fully private.
               </p>
             </div>
             <div className="rounded-lg border bg-card p-4 text-left">
