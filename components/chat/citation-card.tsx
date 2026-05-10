@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
 import { FileText, ChevronDown, ChevronUp } from "lucide-react";
 
 export interface Citation {
