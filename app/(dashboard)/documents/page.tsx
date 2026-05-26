@@ -1,11 +1,9 @@
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { UploadDropzone } from "@/components/documents/upload-dropzone";
 import { DocumentList } from "@/components/documents/document-list";
+import { LoadingSkeleton } from "@/components/shared/loading-states";
 
-/**
- * Documents page — upload dropzone + user document list.
- * Only shows user-owned documents (RLS, is_public=false).
- */
 export default async function DocumentsPage() {
   const supabase = await createClient();
 
@@ -17,17 +15,19 @@ export default async function DocumentsPage() {
     .limit(100);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Documents</h1>
-        <p className="text-muted-foreground">
+    <div className="space-y-6 animate-fade-up">
+      <div className="space-y-1">
+        <h1 className="page-title">Documents</h1>
+        <p className="page-description">
           Upload PDFs to expand your knowledge base. Your documents are private and searchable only by you.
         </p>
       </div>
 
       <UploadDropzone />
 
-      <DocumentList documents={documents || []} />
+      <Suspense fallback={<LoadingSkeleton variant="table" />}>
+        <DocumentList documents={documents || []} />
+      </Suspense>
     </div>
   );
 }

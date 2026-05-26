@@ -4,14 +4,10 @@ import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { Upload, FileText, Loader2 } from "lucide-react";
+import { Upload, FileText, Loader2, FileWarning } from "lucide-react";
 
-const MAX_SIZE = 4.5 * 1024 * 1024; // 4.5 MB
+const MAX_SIZE = 4.5 * 1024 * 1024;
 
-/**
- * UploadDropzone — drag-and-drop PDF uploader.
- * Validates client-side, POSTs to /api/ingest, shows toast on result.
- */
 export function UploadDropzone() {
   const [uploading, setUploading] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -22,7 +18,6 @@ export function UploadDropzone() {
       const file = acceptedFiles[0];
       if (!file) return;
 
-      // Client-side validation
       if (file.type !== "application/pdf") {
         toast.error("Only PDF files are supported");
         return;
@@ -52,7 +47,7 @@ export function UploadDropzone() {
         }
 
         toast.success(`${file.name} uploaded (${data.chunkCount} chunks)`);
-        router.refresh(); // refresh documents list
+        router.refresh();
       } catch {
         toast.error("Upload failed — check your connection");
       } finally {
@@ -74,37 +69,58 @@ export function UploadDropzone() {
   return (
     <div
       {...getRootProps()}
-      className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
+      className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 sm:p-8 text-center transition-all duration-200 ${
         isDragActive
-          ? "border-primary bg-primary/5"
+          ? "border-primary bg-primary/5 scale-[1.01]"
           : uploading
             ? "border-muted bg-muted/50 cursor-wait"
-            : "border-muted-foreground/25 hover:border-primary hover:bg-primary/5"
+            : "border-muted-foreground/25 hover:border-primary hover:bg-primary/5 hover:shadow-sm"
       }`}
+      role="button"
+      aria-label="Upload PDF document"
+      tabIndex={0}
     >
-      <input {...getInputProps()} />
+      <input {...getInputProps()} aria-label="Choose PDF file" />
 
       {uploading ? (
-        <>
-          <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
-          <p className="text-sm font-medium">Processing {fileName}...</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Parsing, chunking, and embedding — this may take up to 30 seconds.
-          </p>
-        </>
+        <div className="space-y-3">
+          <div className="flex justify-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          </div>
+          <div>
+            <p className="text-sm font-medium">Processing {fileName}...</p>
+            <p className="text-xs text-muted-foreground mt-1 text-balance">
+              Parsing, chunking, and embedding — this may take up to 30 seconds.
+            </p>
+          </div>
+        </div>
       ) : isDragActive ? (
-        <>
-          <FileText className="h-8 w-8 text-primary mb-2" />
+        <div className="space-y-3">
+          <div className="flex justify-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+              <FileText className="h-6 w-6 text-primary" />
+            </div>
+          </div>
           <p className="text-sm font-medium">Drop your PDF here</p>
-        </>
+        </div>
       ) : (
-        <>
-          <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-          <p className="text-sm font-medium">Drag & drop a PDF, or click to browse</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Max 4.5 MB, 25 pages. PDF only.
-          </p>
-        </>
+        <div className="space-y-3">
+          <div className="flex justify-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+              <Upload className="h-6 w-6 text-muted-foreground" />
+            </div>
+          </div>
+          <div>
+            <p className="text-sm font-medium">
+              <span className="text-primary">Click to upload</span> or drag and drop
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              PDF only &middot; Max 4.5 MB &middot; 25 pages
+            </p>
+          </div>
+        </div>
       )}
     </div>
   );

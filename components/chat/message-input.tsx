@@ -10,10 +10,6 @@ interface MessageInputProps {
   isLoading: boolean;
 }
 
-/**
- * MessageInput — textarea + submit button.
- * Cmd/Ctrl+Enter shortcut to send. Max length 4000 chars.
- */
 export function MessageInput({ onSubmit, isLoading }: MessageInputProps) {
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -44,12 +40,14 @@ export function MessageInput({ onSubmit, isLoading }: MessageInputProps) {
         disabled={isLoading}
         className="min-h-[44px] max-h-[200px] resize-none"
         rows={1}
+        aria-label="Type your message"
       />
       <Button
         onClick={handleSubmit}
         disabled={!value.trim() || isLoading}
         size="icon"
-        className="shrink-0"
+        className="shrink-0 touch-target"
+        aria-label="Send message"
       >
         <SendHorizontal className="h-4 w-4" />
       </Button>

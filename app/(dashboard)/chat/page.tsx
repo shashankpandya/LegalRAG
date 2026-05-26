@@ -3,11 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { MessageSquare, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createChat } from "@/lib/actions/chats";
+import { EmptyState } from "@/components/shared/loading-states";
 
-/**
- * Chat list page — shows all chats for the current user.
- * Links to individual chat pages.
- */
 export default async function ChatListPage() {
   const supabase = await createClient();
 
@@ -17,16 +14,16 @@ export default async function ChatListPage() {
     .order("updated_at", { ascending: false });
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Chat</h1>
-          <p className="text-muted-foreground">
+    <div className="space-y-6 animate-fade-up">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="space-y-1">
+          <h1 className="page-title">Chat</h1>
+          <p className="page-description">
             Ask questions about Indian startup compliance and get cited answers.
           </p>
         </div>
         <form action={createChat}>
-          <Button size="sm" className="gap-2">
+          <Button size="sm" className="gap-2 w-full sm:w-auto">
             <Plus className="h-4 w-4" />
             New chat
           </Button>
@@ -34,31 +31,38 @@ export default async function ChatListPage() {
       </div>
 
       {chats && chats.length > 0 ? (
-        <div className="space-y-2">
-          {chats.map((chat) => (
+        <div className="grid gap-2">
+          {chats.map((chat, idx) => (
             <Link
               key={chat.id}
               href={`/chat/${chat.id}`}
-              className="flex items-center gap-3 rounded-lg border bg-card p-4 transition-colors hover:bg-accent"
+              className="interactive-item flex items-center gap-3 animate-fade-up"
+              style={{ animationDelay: `${idx * 50}ms` }}
             >
-              <MessageSquare className="h-5 w-5 text-muted-foreground shrink-0" />
-              <div className="min-w-0">
-                <p className="font-medium truncate">{chat.title}</p>
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 shrink-0">
+                <MessageSquare className="h-4 w-4 text-primary" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-sm truncate">{chat.title}</p>
                 <p className="text-xs text-muted-foreground">
-                  {new Date(chat.updated_at).toLocaleDateString()}
+                  {new Date(chat.updated_at).toLocaleDateString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </p>
               </div>
             </Link>
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-lg border bg-card p-12 text-center">
-          <MessageSquare className="h-10 w-10 text-muted-foreground mb-3" />
-          <p className="font-medium">No chats yet</p>
-          <p className="text-sm text-muted-foreground mt-1">
-            Ask your first question from the dashboard.
-          </p>
-        </div>
+        <EmptyState
+          icon={MessageSquare}
+          title="No chats yet"
+          description="Ask your first question from the dashboard."
+        />
       )}
     </div>
   );

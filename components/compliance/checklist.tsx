@@ -18,18 +18,14 @@ interface ComplianceChecklistProps {
   items: ComplianceItem[];
 }
 
-/**
- * ComplianceChecklist — card with grouped items and interactive checkboxes.
- * Each toggle calls the server action and shows optimistic UI.
- */
 export function ComplianceChecklist({ label, items }: ComplianceChecklistProps) {
   const doneCount = items.filter((i) => i.completed).length;
 
   return (
-    <div className="rounded-lg border bg-card">
+    <div className="rounded-lg border bg-card shadow-sm transition-shadow duration-200 hover:shadow-md">
       <div className="flex items-center justify-between border-b px-4 py-3">
-        <h3 className="font-semibold">{label}</h3>
-        <span className="text-xs text-muted-foreground">
+        <h3 className="font-semibold text-sm">{label}</h3>
+        <span className="text-xs text-muted-foreground font-medium">
           {doneCount} / {items.length} done
         </span>
       </div>
@@ -48,13 +44,13 @@ function ChecklistItem({ item }: { item: ComplianceItem }) {
 
   async function handleToggle() {
     const next = !completed;
-    setCompleted(next); // Optimistic
+    setCompleted(next);
     setToggling(true);
 
     try {
       await toggleItem(item.id, next);
     } catch {
-      setCompleted(!next); // Revert on error
+      setCompleted(!next);
     } finally {
       setToggling(false);
     }
@@ -64,27 +60,38 @@ function ChecklistItem({ item }: { item: ComplianceItem }) {
     <button
       onClick={handleToggle}
       disabled={toggling}
-      className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-accent disabled:opacity-50"
+      className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors duration-200 hover:bg-accent disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+      aria-label={`${item.title} — ${completed ? "Completed" : "Not completed"}. Click to toggle.`}
     >
       <div className="mt-0.5 shrink-0">
         {toggling ? (
           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
         ) : completed ? (
-          <CheckCircle className="h-4 w-4 text-green-600" />
+          <CheckCircle className="h-4 w-4 text-green-600 transition-colors" />
         ) : (
-          <Circle className="h-4 w-4 text-muted-foreground" />
+          <Circle className="h-4 w-4 text-muted-foreground transition-colors hover:text-primary" />
         )}
       </div>
       <div className="min-w-0">
-        <p className={`text-sm font-medium ${completed ? "line-through text-muted-foreground" : ""}`}>
+        <p className={`text-sm font-medium transition-all duration-200 ${completed ? "line-through text-muted-foreground" : ""}`}>
           {item.title}
         </p>
         {item.description && (
-          <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>
+          <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{item.description}</p>
         )}
         {item.due_date && (
-          <span className="inline-block mt-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
-            Due: {new Date(item.due_date).toLocaleDateString()}
+          <span
+            className={`inline-block mt-1.5 rounded px-1.5 py-0.5 text-[10px] font-medium ${
+              new Date(item.due_date) < new Date() && !completed
+                ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
+                : new Date(item.due_date) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) && !completed
+                  ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                  : "bg-muted text-muted-foreground"
+            }`}
+          >
+            {new Date(item.due_date) < new Date() && !completed
+              ? "Overdue"
+              : `Due: ${new Date(item.due_date).toLocaleDateString()}`}
           </span>
         )}
       </div>

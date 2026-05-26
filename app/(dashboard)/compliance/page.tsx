@@ -2,32 +2,25 @@ import { createClient } from "@/lib/supabase/server";
 import { seedComplianceItems } from "@/lib/actions/compliance";
 import { ComplianceChecklist } from "@/components/compliance/checklist";
 
-const CATEGORY_LABELS: Record<string, string> = {
-  incorporation: "Incorporation",
-  tax: "Tax & Registration",
-  employment: "Employment & Labour",
-  annual: "Annual Filings",
-  data_privacy: "Data Privacy (DPDP)",
+const CATEGORY_LABELS: Record<string, { label: string; icon: string }> = {
+  incorporation: { label: "Incorporation", icon: "🏛️" },
+  tax: { label: "Tax & Registration", icon: "💰" },
+  employment: { label: "Employment & Labour", icon: "👥" },
+  annual: { label: "Annual Filings", icon: "📋" },
+  data_privacy: { label: "Data Privacy (DPDP)", icon: "🛡️" },
 };
 
 const CATEGORY_ORDER = ["incorporation", "tax", "employment", "annual", "data_privacy"];
 
-/**
- * Compliance page — auto-seeds checklist on first visit based on company type.
- * Groups items by category in a responsive grid.
- */
 export default async function CompliancePage() {
   const supabase = await createClient();
 
-  // Read existing compliance items
   let { data: items } = await supabase
     .from("compliance_items")
     .select("id, title, description, category, due_date, completed")
     .order("created_at", { ascending: true });
 
-  // Auto-seed if empty
   if (!items || items.length === 0) {
-    // Get user's company type from profile
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -41,7 +34,6 @@ export default async function CompliancePage() {
 
       await seedComplianceItems(profile?.company_type);
 
-      // Re-read after seeding
       const { data: seeded } = await supabase
         .from("compliance_items")
         .select("id, title, description, category, due_date, completed")
@@ -51,44 +43,76 @@ export default async function CompliancePage() {
     }
   }
 
-  // Group by category
   const grouped = CATEGORY_ORDER.map((cat) => ({
     category: cat,
-    label: CATEGORY_LABELS[cat] || cat,
+    label: CATEGORY_LABELS[cat]?.label || cat,
+    icon: CATEGORY_LABELS[cat]?.icon || "📄",
     items: (items || []).filter((i) => i.category === cat),
   })).filter((g) => g.items.length > 0);
 
+  const totalItems = items?.length ?? 0;
+  const completedItems = items?.filter((i) => i.completed).length ?? 0;
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Compliance Checklist</h1>
-        <p className="text-muted-foreground">
+    <div className="space-y-6 animate-fade-up">
+      <div className="space-y-1">
+        <h1 className="page-title">Compliance Checklist</h1>
+        <p className="page-description">
           Track your regulatory requirements. Items are auto-generated based on your company type.
         </p>
       </div>
 
+      {totalItems > 0 && (
+        <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+            <span className="text-lg">{completedItems === totalItems ? "🎉" : "📊"}</span>
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium">
+              {completedItems === totalItems
+                ? "All compliance items complete!"
+                : `${completedItems} of ${totalItems} items completed`}
+            </p>
+            <div className="mt-1.5 h-2 w-full rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full bg-primary transition-all duration-500 ease-out"
+                style={{ width: `${(completedItems / totalItems) * 100}%` }}
+              />
+            </div>
+          </div>
+          <span className="text-xs font-medium text-muted-foreground">
+            {Math.round((completedItems / totalItems) * 100)}%
+          </span>
+        </div>
+      )}
+
       {grouped.length > 0 ? (
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
           {grouped.map((group) => (
-            <ComplianceChecklist
-              key={group.category}
-              label={group.label}
-              items={group.items}
-            />
+            <div key={group.category} className="animate-fade-up">
+              <ComplianceChecklist
+                label={group.label}
+                items={group.items}
+              />
+            </div>
           ))}
         </div>
       ) : (
-        <div className="rounded-lg border bg-card p-12 text-center">
-          <p className="font-medium">No compliance items</p>
-          <p className="text-sm text-muted-foreground mt-1">
-            Set your company type in your profile to get a personalized checklist.
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed bg-card p-12 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-4">
+            <span className="text-xl">📋</span>
+          </div>
+          <p className="font-semibold">No compliance items</p>
+          <p className="text-sm text-muted-foreground mt-1 max-w-xs text-balance">
+            Set your company type in your profile to get a personalized compliance checklist.
           </p>
         </div>
       )}
 
-      <p className="text-xs text-muted-foreground">
-        ⚖️ This checklist is for general guidance only. Requirements vary by state,
-        industry, and circumstances. Consult a qualified professional.
+      <p className="text-xs text-muted-foreground text-balance flex items-center gap-1.5">
+        <span className="text-base">⚖️</span>
+        This checklist is for general guidance only. Requirements vary by state, industry, and circumstances.
+        Consult a qualified professional.
       </p>
     </div>
   );

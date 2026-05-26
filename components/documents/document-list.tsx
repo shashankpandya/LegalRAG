@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { deleteDocument } from "@/lib/actions/documents";
 import { Button } from "@/components/ui/button";
 import { FileText, Trash2, Loader2, CheckCircle, XCircle, Clock } from "lucide-react";
+import { EmptyState } from "@/components/shared/loading-states";
 
 interface Document {
   id: string;
@@ -24,21 +25,21 @@ function StatusBadge({ status }: { status: string }) {
   switch (status) {
     case "ready":
       return (
-        <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600">
+        <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400">
           <CheckCircle className="h-3 w-3" />
           Ready
         </span>
       );
     case "failed":
       return (
-        <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600">
+        <span className="inline-flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400">
           <XCircle className="h-3 w-3" />
           Failed
         </span>
       );
     default:
       return (
-        <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600">
+        <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400">
           <Clock className="h-3 w-3 animate-spin" />
           Processing
         </span>
@@ -52,9 +53,6 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-/**
- * DocumentList — table of user-uploaded documents with delete action.
- */
 export function DocumentList({ documents }: DocumentListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -74,59 +72,61 @@ export function DocumentList({ documents }: DocumentListProps) {
 
   if (documents.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-lg border bg-card p-12 text-center">
-        <FileText className="h-10 w-10 text-muted-foreground mb-3" />
-        <p className="font-medium">No documents uploaded</p>
-        <p className="text-sm text-muted-foreground mt-1">
-          Drag a PDF into the dropzone above to get started.
-        </p>
-      </div>
+      <EmptyState
+        icon={FileText}
+        title="No documents uploaded"
+        description="Drag a PDF into the dropzone above to get started."
+      />
     );
   }
 
   return (
-    <div className="rounded-lg border bg-card">
+    <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b text-left text-muted-foreground">
-              <th className="px-4 py-3 font-medium">Name</th>
-              <th className="px-4 py-3 font-medium">Pages</th>
-              <th className="px-4 py-3 font-medium">Chunks</th>
-              <th className="px-4 py-3 font-medium">Size</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium">Uploaded</th>
-              <th className="px-4 py-3 font-medium sr-only">Actions</th>
+            <tr className="border-b bg-muted/30 text-left text-muted-foreground">
+              <th className="px-4 py-3 font-medium text-xs uppercase tracking-wider">Name</th>
+              <th className="px-4 py-3 font-medium text-xs uppercase tracking-wider hidden sm:table-cell">Pages</th>
+              <th className="px-4 py-3 font-medium text-xs uppercase tracking-wider hidden md:table-cell">Chunks</th>
+              <th className="px-4 py-3 font-medium text-xs uppercase tracking-wider hidden sm:table-cell">Size</th>
+              <th className="px-4 py-3 font-medium text-xs uppercase tracking-wider">Status</th>
+              <th className="px-4 py-3 font-medium text-xs uppercase tracking-wider hidden lg:table-cell">Uploaded</th>
+              <th className="px-4 py-3 sr-only">Actions</th>
             </tr>
           </thead>
           <tbody>
             {documents.map((doc) => (
-              <tr key={doc.id} className="border-b last:border-0">
-                <td className="px-4 py-3 font-medium max-w-[200px] truncate" title={doc.name}>
-                  {doc.name}
+              <tr key={doc.id} className="border-b last:border-0 transition-colors hover:bg-muted/20">
+                <td className="px-4 py-3 font-medium max-w-[180px] sm:max-w-[200px] truncate" title={doc.name}>
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="truncate">{doc.name}</span>
+                  </div>
                 </td>
-                <td className="px-4 py-3 text-muted-foreground">
+                <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">
                   {doc.page_count ?? "—"}
                 </td>
-                <td className="px-4 py-3 text-muted-foreground">
+                <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
                   {doc.chunk_count ?? "—"}
                 </td>
-                <td className="px-4 py-3 text-muted-foreground">
+                <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">
                   {doc.size_bytes ? formatBytes(doc.size_bytes) : "—"}
                 </td>
                 <td className="px-4 py-3">
                   <StatusBadge status={doc.status} />
                 </td>
-                <td className="px-4 py-3 text-muted-foreground">
+                <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
                   {new Date(doc.created_at).toLocaleDateString()}
                 </td>
                 <td className="px-4 py-3">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    className="h-9 w-9 text-muted-foreground hover:text-destructive"
                     onClick={() => handleDelete(doc.id, doc.name)}
                     disabled={deletingId === doc.id}
+                    aria-label={`Delete document ${doc.name}`}
                   >
                     {deletingId === doc.id ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
