@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
+import { CookieConsent } from "@/components/shared/cookie-consent";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -17,10 +18,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         {children}
-        <Toaster richColors position="bottom-right" />
+        <CookieConsent />
+        <Toaster
+          richColors
+          position="bottom-right"
+          toastOptions={{
+            style: { fontSize: "0.875rem" },
+          }}
+        />
       </body>
     </html>
   );

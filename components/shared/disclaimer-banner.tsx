@@ -1,19 +1,11 @@
 import { Scale } from "lucide-react";
 
-/**
- * Persistent legal disclaimer banner — renders at the top of the dashboard layout.
- *
- * Non-negotiable per Master Prompt. Built in Sprint 01 so it's never an afterthought.
- * Copy sourced from docs/security/legal-disclaimer-strategy.md.
- *
- * Server Component — no client-side interactivity needed.
- */
 export function DisclaimerBanner() {
   return (
-    <div className="border-b bg-amber-50 dark:bg-amber-950 px-4 py-2 text-xs text-amber-900 dark:text-amber-100">
-      <div className="mx-auto flex max-w-7xl items-center gap-2">
-        <Scale className="h-3.5 w-3.5 flex-shrink-0" />
-        <p>
+    <div className="border-b bg-amber-50 dark:bg-amber-950/60 px-3 sm:px-4 py-2 text-[11px] sm:text-xs text-amber-800 dark:text-amber-200" role="note" aria-label="Legal disclaimer">
+      <div className="mx-auto flex max-w-7xl items-center gap-1.5 sm:gap-2">
+        <Scale className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+        <p className="text-balance">
           LegalRAG provides general informational guidance based on public legal documents. It is{" "}
           <strong>not</strong> legal advice. Always consult a qualified professional before acting.
         </p>

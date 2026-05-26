@@ -3,6 +3,7 @@ import { type User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
+import { OnboardingTour } from "@/components/shared/onboarding-tour";
 import {
   LayoutDashboard,
   MessageSquare,
@@ -24,14 +25,9 @@ interface SidebarProps {
   user: User;
 }
 
-/**
- * Sidebar navigation — Server Component.
- * Renders nav links + recent chats + user email + sign out button.
- */
 export async function Sidebar({ user }: SidebarProps) {
   const supabase = await createClient();
 
-  // Fetch recent chats (RLS-scoped to current user)
   const { data: chats } = await supabase
     .from("chats")
     .select("id, title, updated_at")
@@ -39,20 +35,22 @@ export async function Sidebar({ user }: SidebarProps) {
     .limit(30);
 
   return (
-    <aside className="flex w-64 flex-col border-r bg-card">
-      {/* Brand */}
-      <div className="flex items-center gap-2 border-b px-4 py-4">
-        <Scale className="h-5 w-5" />
-        <span className="text-lg font-semibold">LegalRAG</span>
+    <aside className="hidden md:flex w-64 flex-col border-r bg-card" data-onboarding="sidebar-nav">
+      <div className="flex items-center justify-between border-b px-4 py-3" data-onboarding="welcome">
+        <div className="flex items-center gap-2">
+          <Scale className="h-5 w-5 text-primary" />
+          <span className="text-lg font-semibold tracking-tight">LegalRAG</span>
+        </div>
+        <OnboardingTour />
       </div>
 
-      {/* Navigation */}
-      <nav className="space-y-1 px-3 py-4">
+      <nav className="space-y-1 px-3 py-4" aria-label="Main navigation">
         {navItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}
-            className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors duration-200 hover:bg-accent hover:text-accent-foreground"
+            aria-label={item.label}
           >
             <item.icon className="h-4 w-4" />
             {item.label}
@@ -60,14 +58,13 @@ export async function Sidebar({ user }: SidebarProps) {
         ))}
       </nav>
 
-      {/* Recent chats */}
-      <div className="flex-1 overflow-y-auto border-t px-3 py-3">
+      <div className="flex-1 overflow-y-auto border-t px-3 py-3" data-onboarding="recent-chats">
         <div className="flex items-center justify-between px-3 pb-2">
           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Recent Chats
           </span>
-          <Link href="/chat" title="All chats">
-            <Plus className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+          <Link href="/chat" title="All chats" aria-label="Start new chat">
+            <Plus className="h-3.5 w-3.5 text-muted-foreground transition-colors hover:text-foreground" />
           </Link>
         </div>
         {chats && chats.length > 0 ? (
@@ -76,7 +73,7 @@ export async function Sidebar({ user }: SidebarProps) {
               <Link
                 key={chat.id}
                 href={`/chat/${chat.id}`}
-                className="block truncate rounded-md px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                className="block truncate rounded-md px-3 py-1.5 text-xs text-muted-foreground transition-colors duration-200 hover:bg-accent hover:text-accent-foreground"
                 title={chat.title}
               >
                 {chat.title}
@@ -90,11 +87,16 @@ export async function Sidebar({ user }: SidebarProps) {
         )}
       </div>
 
-      {/* User section */}
-      <div className="border-t px-4 py-4">
+      <div className="border-t px-4 py-4" data-onboarding="user-section">
         <p className="truncate text-xs text-muted-foreground mb-2">{user.email}</p>
         <form action={signOut}>
-          <Button variant="ghost" size="sm" className="w-full justify-start gap-2" type="submit">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start gap-2"
+            type="submit"
+            aria-label="Sign out of your account"
+          >
             <LogOut className="h-4 w-4" />
             Sign out
           </Button>

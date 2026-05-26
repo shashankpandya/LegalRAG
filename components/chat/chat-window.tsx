@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { MessageBubble } from "./message-bubble";
 import { MessageInput } from "./message-input";
 import { CitationCard, type Citation } from "./citation-card";
+import { Scale, MessageSquare } from "lucide-react";
 
 interface Message {
   id: string;
@@ -21,15 +22,6 @@ interface ChatWindowProps {
   initialQuestion?: string;
 }
 
-/**
- * ChatWindow — the core SSE consumer.
- *
- * Holds two separate state buffers per Master Prompt:
- * - `messages` (committed) — the full history
- * - `streamingText` (in-flight) — the single streaming assistant bubble
- *
- * This prevents per-token re-render of the entire message list.
- */
 export function ChatWindow({
   chatId,
   initialMessages,
@@ -43,16 +35,13 @@ export function ChatWindow({
   const router = useRouter();
   const initialFired = useRef(false);
 
-  // Auto-fire initial question from ?initial= param
   useEffect(() => {
     if (initialQuestion && !initialFired.current && messages.length === 0) {
       initialFired.current = true;
       handleSubmit(initialQuestion);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQuestion]);
 
-  // Auto-scroll to bottom on new messages
   useEffect(() => {
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,
@@ -63,7 +52,6 @@ export function ChatWindow({
   async function handleSubmit(question: string) {
     if (isLoading) return;
 
-    // Optimistically add user message
     const userMessage: Message = {
       id: `temp-${Date.now()}`,
       role: "user",
@@ -77,7 +65,6 @@ export function ChatWindow({
     setIsLoading(true);
 
     try {
-      // Build history from current messages (last 6 for the API)
       const history = messages
         .filter((m) => m.role === "user" || m.role === "assistant")
         .slice(-6)
@@ -96,7 +83,6 @@ export function ChatWindow({
         return;
       }
 
-      // Parse SSE stream
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -108,16 +94,14 @@ export function ChatWindow({
 
         buffer += decoder.decode(value, { stream: true });
 
-        // Process complete SSE lines
         const lines = buffer.split("\n");
-        buffer = lines.pop() || ""; // keep incomplete line
+        buffer = lines.pop() || "";
 
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
           const data = line.slice(6).trim();
 
           if (data === "[DONE]") {
-            // Commit streaming text to messages
             const assistantMessage: Message = {
               id: `assistant-${Date.now()}`,
               role: "assistant",
@@ -132,7 +116,7 @@ export function ChatWindow({
             setMessages((prev) => [...prev, assistantMessage]);
             setStreamingText("");
             setIsLoading(false);
-            router.refresh(); // refresh sidebar chat list
+            router.refresh();
             return;
           }
 
@@ -149,7 +133,6 @@ export function ChatWindow({
               return;
             }
           } catch {
-            // Ignore parse errors for incomplete chunks
           }
         }
       }
@@ -160,29 +143,38 @@ export function ChatWindow({
   }
 
   return (
-    <>
-      {/* Messages area */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+    <div className="flex h-full flex-col">
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4"
+        role="log"
+        aria-label="Chat messages"
+        aria-live="polite"
+      >
         {messages.length === 0 && !isLoading && (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <p className="text-lg font-medium text-muted-foreground">
+          <div className="flex flex-col items-center justify-center h-full text-center px-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 mb-4">
+              <Scale className="h-7 w-7 text-primary" />
+            </div>
+            <p className="text-base sm:text-lg font-medium text-muted-foreground">
               Ask a question about Indian startup compliance
             </p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Your answers will be cited from official legal documents.
+            <p className="text-sm text-muted-foreground mt-1.5 max-w-sm text-balance">
+              Your answers will be cited from official legal documents with page references.
             </p>
           </div>
         )}
 
-        {messages.map((msg) => (
-          <MessageBubble key={msg.id} message={msg} />
+        {messages.map((msg, idx) => (
+          <div key={msg.id} className="animate-fade-up" style={{ animationDelay: `${idx * 50}ms` }}>
+            <MessageBubble message={msg} />
+          </div>
         ))}
 
-        {/* Streaming assistant bubble */}
         {isLoading && (
-          <>
+          <div className="animate-fade-up">
             {citations.length > 0 && (
-              <div className="flex gap-2 flex-wrap pl-10">
+              <div className="flex gap-2 flex-wrap pl-10 mb-2">
                 {citations.map((c, i) => (
                   <CitationCard key={i} citation={c} />
                 ))}
@@ -198,14 +190,13 @@ export function ChatWindow({
               }}
               isStreaming={!streamingText}
             />
-          </>
+          </div>
         )}
       </div>
 
-      {/* Input area */}
-      <div className="border-t bg-background p-4">
+      <div className="border-t bg-background px-3 sm:px-4 py-3 sm:py-4">
         <MessageInput onSubmit={handleSubmit} isLoading={isLoading} />
       </div>
-    </>
+    </div>
   );
 }

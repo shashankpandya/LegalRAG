@@ -17,7 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Scale, Loader2 } from "lucide-react";
+import { Scale, Loader2, Mail, Lock } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -49,7 +49,6 @@ export default function LoginPage() {
     });
 
     if (error) {
-      // User-friendly error messages
       if (error.message.includes("Invalid login")) {
         toast.error("Invalid email or password. Please try again.");
       } else if (error.message.includes("Email not confirmed")) {
@@ -68,56 +67,71 @@ export default function LoginPage() {
   }
 
   return (
-    <Card>
-      <CardHeader className="space-y-1 text-center">
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <Scale className="h-6 w-6" />
-          <span className="text-xl font-semibold">LegalRAG</span>
-        </div>
-        <CardTitle className="text-2xl">Sign in</CardTitle>
-        <CardDescription>Enter your email and password to continue</CardDescription>
-      </CardHeader>
-      <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              required
-            />
-            {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+    <div className="w-full animate-fade-up">
+      <Card>
+        <CardHeader className="space-y-2 text-center">
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+              <Scale className="h-5 w-5 text-primary" />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              required
-            />
-            {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
-          </div>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-4">
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Sign in
-          </Button>
-          <p className="text-sm text-muted-foreground text-center">
-            Don&apos;t have an account?{" "}
-            <Link href="/signup" className="text-primary underline-offset-4 hover:underline">
-              Sign up
-            </Link>
-          </p>
-        </CardFooter>
-      </form>
-    </Card>
+          <CardTitle className="text-2xl">Welcome back</CardTitle>
+          <CardDescription>Enter your email and password to continue</CardDescription>
+        </CardHeader>
+        <form onSubmit={handleSubmit} noValidate>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                  required
+                  className="pl-9"
+                />
+              </div>
+              {errors.email && (
+                <p className="text-xs text-destructive mt-1" role="alert">{errors.email}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  required
+                  className="pl-9"
+                />
+              </div>
+              {errors.password && (
+                <p className="text-xs text-destructive mt-1" role="alert">{errors.password}</p>
+              )}
+            </div>
+          </CardContent>
+          <CardFooter className="flex flex-col gap-4">
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Sign in
+            </Button>
+            <p className="text-sm text-muted-foreground text-center">
+              Don&apos;t have an account?{" "}
+              <Link href="/signup" className="text-primary font-medium underline-offset-4 hover:underline">
+                Sign up
+              </Link>
+            </p>
+          </CardFooter>
+        </form>
+      </Card>
+    </div>
   );
 }
