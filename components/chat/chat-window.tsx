@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { MessageBubble } from "./message-bubble";
 import { MessageInput } from "./message-input";
 import { CitationCard, type Citation } from "./citation-card";
-import { Scale, MessageSquare } from "lucide-react";
+import { Scale, MessageSquare, AlertCircle, Loader2 } from "lucide-react";
 
 interface Message {
   id: string;
@@ -22,6 +22,13 @@ interface ChatWindowProps {
   initialQuestion?: string;
 }
 
+interface CitationEvent {
+  type: "citations";
+  citations: Citation[];
+  hasContext: boolean;
+  retrieveError?: string | null;
+}
+
 export function ChatWindow({
   chatId,
   initialMessages,
@@ -31,6 +38,8 @@ export function ChatWindow({
   const [streamingText, setStreamingText] = useState("");
   const [citations, setCitations] = useState<Citation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasContext, setHasContext] = useState(true);
+  const [retrieveError, setRetrieveError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const initialFired = useRef(false);
@@ -62,6 +71,8 @@ export function ChatWindow({
     setMessages((prev) => [...prev, userMessage]);
     setStreamingText("");
     setCitations([]);
+    setHasContext(true);
+    setRetrieveError(null);
     setIsLoading(true);
 
     try {
@@ -121,9 +132,12 @@ export function ChatWindow({
           }
 
           try {
-            const event = JSON.parse(data);
+            const event = JSON.parse(data) as CitationEvent | { type: string; token?: string; message?: string };
             if (event.type === "citations") {
-              setCitations(event.citations || []);
+              const citationEvent = event as CitationEvent;
+              setCitations(citationEvent.citations || []);
+              setHasContext(citationEvent.hasContext ?? true);
+              setRetrieveError(citationEvent.retrieveError || null);
             } else if (event.type === "token") {
               fullText += event.token;
               setStreamingText(fullText);
@@ -144,6 +158,30 @@ export function ChatWindow({
 
   return (
     <div className="flex h-full flex-col">
+      {/* Context status indicator */}
+      {isLoading && (
+        <div className="flex items-center gap-2 px-4 py-2 border-b bg-muted/30">
+          {retrieveError ? (
+            <>
+              <AlertCircle className="h-4 w-4 text-amber-500" />
+              <span className="text-xs text-muted-foreground">Retrieval unavailable</span>
+            </>
+          ) : hasContext ? (
+            <>
+              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-xs text-muted-foreground">
+                {citations.length > 0 ? `${citations.length} source${citations.length > 1 ? 's' : ''} found` : 'Searching knowledge base...'}
+              </span>
+            </>
+          ) : (
+            <>
+              <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Searching documents...</span>
+            </>
+          )}
+        </div>
+      )}
+
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4"
@@ -153,15 +191,20 @@ export function ChatWindow({
       >
         {messages.length === 0 && !isLoading && (
           <div className="flex flex-col items-center justify-center h-full text-center px-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 mb-4">
-              <Scale className="h-7 w-7 text-primary" />
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-5 shadow-sm">
+              <Scale className="h-8 w-8 text-primary" />
             </div>
-            <p className="text-base sm:text-lg font-medium text-muted-foreground">
-              Ask a question about Indian startup compliance
+            <p className="text-lg sm:text-xl font-semibold text-foreground mb-2">
+              Ask a compliance question
             </p>
-            <p className="text-sm text-muted-foreground mt-1.5 max-w-sm text-balance">
-              Your answers will be cited from official legal documents with page references.
+            <p className="text-sm text-muted-foreground max-w-md text-balance leading-relaxed">
+              Get answers about Indian startup compliance with citations from official legal documents.
             </p>
+            <div className="flex flex-wrap justify-center gap-2 mt-6">
+              <SampleQuestion onClick={handleSubmit}>How do I register a Pvt Ltd company?</SampleQuestion>
+              <SampleQuestion onClick={handleSubmit}>What are the GST registration requirements?</SampleQuestion>
+              <SampleQuestion onClick={handleSubmit}>How to open a current bank account?</SampleQuestion>
+            </div>
           </div>
         )}
 
@@ -174,10 +217,13 @@ export function ChatWindow({
         {isLoading && (
           <div className="animate-fade-up">
             {citations.length > 0 && (
-              <div className="flex gap-2 flex-wrap pl-10 mb-2">
-                {citations.map((c, i) => (
-                  <CitationCard key={i} citation={c} />
-                ))}
+              <div className="mb-3">
+                <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Sources</p>
+                <div className="flex gap-2 flex-wrap">
+                  {citations.map((c, i) => (
+                    <CitationCard key={i} citation={c} />
+                  ))}
+                </div>
               </div>
             )}
             <MessageBubble
@@ -194,9 +240,30 @@ export function ChatWindow({
         )}
       </div>
 
+      {/* Context warning when no sources found */}
+      {!isLoading && messages.length > 0 && !hasContext && (
+        <div className="px-4 py-2 bg-amber-50 border-t border-amber-200">
+          <p className="text-xs text-amber-800 flex items-center gap-2">
+            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+            No specific sources found for this query. Answer provided from general knowledge.
+          </p>
+        </div>
+      )}
+
       <div className="border-t bg-background px-3 sm:px-4 py-3 sm:py-4">
         <MessageInput onSubmit={handleSubmit} isLoading={isLoading} />
       </div>
     </div>
+  );
+}
+
+function SampleQuestion({ children, onClick }: { children: React.ReactNode; onClick: (q: string) => void }) {
+  return (
+    <button
+      onClick={() => onClick(children as string)}
+      className="text-xs px-3 py-1.5 rounded-full bg-muted hover:bg-muted/80 text-muted-foreground transition-colors border"
+    >
+      {children}
+    </button>
   );
 }
