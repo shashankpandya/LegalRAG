@@ -8,6 +8,17 @@ import { llm } from "@/lib/rag/providers";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+const NO_CONTEXT_PROMPT = `You are LegalRAG, an AI assistant for startup founders navigating Indian (and where applicable, international) compliance, registration, and regulatory questions.
+
+CRITICAL RULES:
+1. The user is asking about a topic that may not be covered in your available documents. Respond honestly about what you know while being helpful.
+2. If you reference specific regulations, laws, or procedures, make it clear this is general informational guidance.
+3. Never invent specific section numbers, fees, or deadlines if you're not certain.
+4. Structure answers with: brief overview → practical steps → important caveats.
+5. End every response with: "⚖️ This is general informational guidance, not legal advice. Consult a qualified professional before acting."
+
+Be concise, practical, and founder-friendly.`;
+
 /**
  * POST /api/chat — the money endpoint.
  *
@@ -79,20 +90,35 @@ export async function POST(req: Request) {
       content: question,
     });
 
-    // 5. Retrieve relevant context
-    const contexts = await retrieve(question, user.id);
+    // 5. Retrieve relevant context (may be empty)
+    let contexts: Awaited<ReturnType<typeof retrieve>> = [];
+    let retrieveError: string | null = null;
+    
+    try {
+      contexts = await retrieve(question, user.id);
+    } catch (error) {
+      retrieveError = error instanceof Error ? error.message : "Retrieval failed";
+      console.error("[/api/chat] Retrieval error:", retrieveError);
+    }
 
     // 6. Build messages for LLM
     const slicedHistory = (history || []).slice(-6); // last 3 turns
+    const hasContext = contexts.length > 0;
+    
+    // Use appropriate system prompt based on context availability
+    const systemPrompt = hasContext ? SYSTEM_PROMPT : NO_CONTEXT_PROMPT;
+    
     const llmMessages = [
-      { role: "system" as const, content: SYSTEM_PROMPT },
+      { role: "system" as const, content: systemPrompt },
       ...slicedHistory.map((h) => ({
         role: h.role as "user" | "assistant",
         content: h.content,
       })),
       {
         role: "user" as const,
-        content: buildUserPrompt(question, contexts),
+        content: hasContext 
+          ? buildUserPrompt(question, contexts)
+          : `Question: ${question}`,
       },
     ];
 
@@ -103,7 +129,7 @@ export async function POST(req: Request) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          // Emit citations event first
+          // Emit citations event first (empty if no context)
           const citationsEvent = {
             type: "citations",
             citations: contexts.map((c) => ({
@@ -112,6 +138,8 @@ export async function POST(req: Request) {
               doc_id: c.docId,
               snippet: c.parentText.slice(0, 200),
             })),
+            hasContext,
+            retrieveError,
           };
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify(citationsEvent)}\n\n`),
