@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { MessageBubble } from "./message-bubble";
@@ -43,22 +43,9 @@ export function ChatWindow({
   const scrollRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const initialFired = useRef(false);
+  const handleSubmitRef = useRef<(question: string) => Promise<void>>();
 
-  useEffect(() => {
-    if (initialQuestion && !initialFired.current && messages.length === 0) {
-      initialFired.current = true;
-      handleSubmit(initialQuestion);
-    }
-  }, [initialQuestion]);
-
-  useEffect(() => {
-    scrollRef.current?.scrollTo({
-      top: scrollRef.current.scrollHeight,
-      behavior: "smooth",
-    });
-  }, [messages, streamingText]);
-
-  async function handleSubmit(question: string) {
+  const handleSubmit = useCallback(async function handleSubmit(question: string) {
     if (isLoading) return;
 
     const userMessage: Message = {
@@ -154,7 +141,24 @@ export function ChatWindow({
       toast.error("Failed to send message. Please try again.");
       setIsLoading(false);
     }
-  }
+  }, [chatId, citations, isLoading, messages, router]);
+
+  // Store handleSubmit in ref for useEffect
+  handleSubmitRef.current = handleSubmit;
+
+  useEffect(() => {
+    if (initialQuestion && !initialFired.current && messages.length === 0) {
+      initialFired.current = true;
+      handleSubmitRef.current?.(initialQuestion);
+    }
+  }, [initialQuestion, messages.length]);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: "smooth",
+    });
+  }, [messages, streamingText]);
 
   return (
     <div className="flex h-full flex-col">

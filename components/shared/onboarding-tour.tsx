@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Scale, HelpCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -57,19 +57,11 @@ export function OnboardingTour() {
   const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const [highlightRect, setHighlightRect] = useState<DOMRect | null>(null);
 
-  useEffect(() => {
-    const completed = localStorage.getItem(ONBOARDING_KEY);
-    if (!completed) {
-      const timer = setTimeout(() => startTour(), 1200);
-      return () => clearTimeout(timer);
-    }
-  }, []);
-
-  function startTour() {
+  const startTour = useCallback(() => {
     setCurrentStep(0);
     setActive(true);
     positionTooltip(0);
-  }
+  }, []);
 
   function positionTooltip(stepIndex: number) {
     const step = steps[stepIndex];
@@ -132,6 +124,14 @@ export function OnboardingTour() {
     setActive(false);
     setHighlightRect(null);
   }
+
+  useEffect(() => {
+    const completed = localStorage.getItem(ONBOARDING_KEY);
+    if (!completed) {
+      const timer = setTimeout(() => startTour(), 1200);
+      return () => clearTimeout(timer);
+    }
+  }, [startTour]);
 
   const step = steps[currentStep];
   const isLastStep = currentStep === steps.length - 1;
