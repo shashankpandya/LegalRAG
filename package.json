@@ -36,6 +36,8 @@
     "react-dom": "^18.3.1",
     "react-dropzone": "^14.3.5",
     "react-hook-form": "^7.75.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.6.0",
     "unpdf": "^0.12.1",

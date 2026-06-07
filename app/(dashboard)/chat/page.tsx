@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { MessageSquare, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { createChat } from "@/lib/actions/chats";
+import { createNewChat } from "@/lib/actions/chats";
 import { EmptyState } from "@/components/shared/loading-states";
 
 export default async function ChatListPage() {
@@ -22,8 +22,9 @@ export default async function ChatListPage() {
             Ask questions about Indian startup compliance and get cited answers.
           </p>
         </div>
-        <form action={createChat}>
-          <Button size="sm" className="gap-2 w-full sm:w-auto">
+        {/* Goes directly to a new chat interface, no intermediate step */}
+        <form action={createNewChat}>
+          <Button size="sm" className="gap-2 w-full sm:w-auto" type="submit">
             <Plus className="h-4 w-4" />
             New chat
           </Button>
@@ -61,7 +62,15 @@ export default async function ChatListPage() {
         <EmptyState
           icon={MessageSquare}
           title="No chats yet"
-          description="Ask your first question from the dashboard."
+          description="Click New chat to start asking compliance questions."
+          action={
+            <form action={createNewChat}>
+              <Button size="sm" className="gap-2" type="submit">
+                <Plus className="h-4 w-4" />
+                New chat
+              </Button>
+            </form>
+          }
         />
       )}
     </div>

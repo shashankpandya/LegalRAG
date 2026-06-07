@@ -8,24 +8,23 @@ import { llm } from "@/lib/rag/providers";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const NO_CONTEXT_PROMPT = `You are LegalRAG, an AI assistant for startup founders navigating Indian (and where applicable, international) compliance, registration, and regulatory questions.
-
-CRITICAL RULES:
-1. The user is asking about a topic that may not be covered in your available documents. Respond honestly about what you know while being helpful.
-2. If you reference specific regulations, laws, or procedures, make it clear this is general informational guidance.
-3. Never invent specific section numbers, fees, or deadlines if you're not certain.
-4. Structure answers with: brief overview → practical steps → important caveats.
-5. End every response with: "⚖️ This is general informational guidance, not legal advice. Consult a qualified professional before acting."
-
-Be concise, practical, and founder-friendly.`;
+/**
+ * Turn a question into a clean chat title (max 60 chars).
+ */
+function makeChatTitle(question: string): string {
+  const cleaned = question.trim().replace(/[?!.]+$/, "").trim();
+  if (cleaned.length <= 60) return cleaned;
+  const truncated = cleaned.slice(0, 60);
+  const lastSpace = truncated.lastIndexOf(" ");
+  return lastSpace > 30 ? truncated.slice(0, lastSpace) + "…" : truncated + "…";
+}
 
 /**
- * POST /api/chat — the money endpoint.
+ * POST /api/chat — streaming RAG endpoint.
  *
- * Auth → validate → insert user msg → retrieve → stream SSE (citations + tokens)
- * → persist assistant msg → update chat → [DONE]
- *
- * See: docs/api/chat-endpoint.md
+ * Auth → validate → insert user msg → retrieve context → stream SSE
+ * (citations event + token events + [DONE]) → persist assistant msg
+ * → auto-title chat if still "New chat" → update timestamp
  */
 export async function POST(req: Request) {
   try {
@@ -72,10 +71,10 @@ export async function POST(req: Request) {
 
     const { chatId, question, history } = parsed.data;
 
-    // 3. Verify chat ownership (RLS + explicit check)
+    // 3. Verify chat ownership (RLS + explicit check) + check current title
     const { data: chat } = await supabase
       .from("chats")
-      .select("id")
+      .select("id, title")
       .eq("id", chatId)
       .single();
 
@@ -90,46 +89,41 @@ export async function POST(req: Request) {
       content: question,
     });
 
-    // 5. Retrieve relevant context (may be empty)
-    let contexts: Awaited<ReturnType<typeof retrieve>> = [];
-    let retrieveError: string | null = null;
-    
-    try {
-      contexts = await retrieve(question, user.id);
-    } catch (error) {
-      retrieveError = error instanceof Error ? error.message : "Retrieval failed";
-      console.error("[/api/chat] Retrieval error:", retrieveError);
-    }
+    // 5. Retrieve relevant context from Qdrant
+    const contexts = await retrieve(question, user.id);
 
-    // 6. Build messages for LLM
-    const slicedHistory = (history || []).slice(-6); // last 3 turns
-    const hasContext = contexts.length > 0;
-    
-    // Use appropriate system prompt based on context availability
-    const systemPrompt = hasContext ? SYSTEM_PROMPT : NO_CONTEXT_PROMPT;
-    
+    // 6. Build LLM messages
+    const slicedHistory = (history || []).slice(-6);
     const llmMessages = [
-      { role: "system" as const, content: systemPrompt },
+      { role: "system" as const, content: SYSTEM_PROMPT },
       ...slicedHistory.map((h) => ({
         role: h.role as "user" | "assistant",
         content: h.content,
       })),
       {
         role: "user" as const,
-        content: hasContext 
-          ? buildUserPrompt(question, contexts)
-          : `Question: ${question}`,
+        content: buildUserPrompt(question, contexts),
       },
     ];
 
-    // 7. Open SSE stream
+    // 7. Stream SSE
     const encoder = new TextEncoder();
     let fullResponse = "";
+
+    // Auto-title: if the chat is still "New chat", update it from the question.
+    // Do this before streaming so the sidebar refreshes correctly.
+    const isFirstMessage = chat.title === "New chat";
+    if (isFirstMessage) {
+      await supabase
+        .from("chats")
+        .update({ title: makeChatTitle(question) })
+        .eq("id", chatId);
+    }
 
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          // Emit citations event first (empty if no context)
+          // Emit citations first so the UI can render them before tokens arrive
           const citationsEvent = {
             type: "citations",
             citations: contexts.map((c) => ({
@@ -138,14 +132,12 @@ export async function POST(req: Request) {
               doc_id: c.docId,
               snippet: c.parentText.slice(0, 200),
             })),
-            hasContext,
-            retrieveError,
           };
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify(citationsEvent)}\n\n`),
           );
 
-          // Stream tokens from LLM
+          // Stream tokens
           for await (const token of llm.stream(llmMessages, {
             model: "llama-3.3-70b-versatile",
             temperature: 0.2,
@@ -159,7 +151,7 @@ export async function POST(req: Request) {
             );
           }
 
-          // Persist assistant message with citations
+          // Persist assistant message
           await supabase.from("messages").insert({
             chat_id: chatId,
             role: "assistant",
@@ -171,13 +163,12 @@ export async function POST(req: Request) {
             })),
           });
 
-          // Update chat timestamp
+          // Update chat timestamp so it rises to top of sidebar list
           await supabase
             .from("chats")
             .update({ updated_at: new Date().toISOString() })
             .eq("id", chatId);
 
-          // Emit done
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           controller.close();
         } catch (error) {
