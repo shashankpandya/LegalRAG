@@ -27,22 +27,31 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  // Single fetch — threaded to desktop sidebar and mobile sidebar
+  // Single fetch — only show chats that have at least one message
+  // (filters out any empty "New chat" rows that slipped through)
   const { data: chats } = await supabase
     .from("chats")
-    .select("id, title, updated_at")
+    .select("id, title, updated_at, messages(count)")
     .order("updated_at", { ascending: false })
     .limit(30);
 
+  // Keep only chats that have messages
+  const activeChats = (chats || [])
+    .filter((c) => {
+      const msgCount = (c.messages as unknown as { count: number }[])?.[0]?.count ?? 0;
+      return msgCount > 0;
+    })
+    .map(({ id, title, updated_at }) => ({ id, title, updated_at }));
+
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar user={user} chats={chats || []} />
+      <Sidebar user={user} chats={activeChats} />
       <div className="flex flex-1 flex-col overflow-hidden min-w-0">
         <DisclaimerBanner />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6" data-onboarding="ask-question">
           {children}
         </main>
-        <DashboardShell chats={chats || []} userEmail={user.email ?? ""} />
+        <DashboardShell chats={activeChats} userEmail={user.email ?? ""} />
       </div>
     </div>
   );

@@ -8,10 +8,18 @@ import { EmptyState } from "@/components/shared/loading-states";
 export default async function ChatListPage() {
   const supabase = await createClient();
 
-  const { data: chats } = await supabase
+  const { data: rawChats } = await supabase
     .from("chats")
-    .select("id, title, updated_at")
+    .select("id, title, updated_at, messages(count)")
     .order("updated_at", { ascending: false });
+
+  // Only show chats that have at least one message
+  const chats = (rawChats || [])
+    .filter((c) => {
+      const count = (c.messages as unknown as { count: number }[])?.[0]?.count ?? 0;
+      return count > 0;
+    })
+    .map(({ id, title, updated_at }) => ({ id, title, updated_at }));
 
   return (
     <div className="space-y-6 animate-fade-up">
