@@ -9,7 +9,9 @@
     "lint": "next lint",
     "format": "prettier --write .",
     "seed": "tsx --env-file=.env.local scripts/seed.ts",
-    "test-rag": "tsx --env-file=.env.local scripts/test-rag.ts"
+    "reseed": "tsx --env-file=.env.local scripts/reseed.ts",
+    "test-rag": "tsx --env-file=.env.local scripts/test-rag.ts",
+    "diagnose-rag": "tsx --env-file=.env.local scripts/diagnose-rag.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
