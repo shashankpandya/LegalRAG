@@ -73,10 +73,9 @@ export async function createNewChat() {
 }
 
 /**
- * Update a chat's title after the first message is sent.
- * Called from the chat API route after the first assistant response.
+ * Rename a chat. RLS ensures only the owner can update.
  */
-export async function updateChatTitle(chatId: string, title: string) {
+export async function renameChat(chatId: string, newTitle: string) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -84,10 +83,34 @@ export async function updateChatTitle(chatId: string, title: string) {
 
   if (!user) throw new Error("Unauthorized");
 
-  await supabase
+  const trimmed = newTitle.trim().slice(0, 100);
+  if (!trimmed) throw new Error("Title cannot be empty");
+
+  const { error } = await supabase
     .from("chats")
-    .update({ title: makeChatTitle(title) })
+    .update({ title: trimmed })
     .eq("id", chatId)
-    .eq("user_id", user.id)
-    .eq("title", "New chat"); // only update if still the default title
+    .eq("user_id", user.id);
+
+  if (error) throw new Error(`Failed to rename chat: ${error.message}`);
+}
+
+/**
+ * Delete a chat and all its messages (cascade).
+ */
+export async function deleteChat(chatId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Unauthorized");
+
+  const { error } = await supabase
+    .from("chats")
+    .delete()
+    .eq("id", chatId)
+    .eq("user_id", user.id);
+
+  if (error) throw new Error(`Failed to delete chat: ${error.message}`);
 }

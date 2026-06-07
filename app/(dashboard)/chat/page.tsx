@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { MessageSquare, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createNewChat } from "@/lib/actions/chats";
 import { EmptyState } from "@/components/shared/loading-states";
+import { ChatListItem } from "@/components/chat/chat-list-item";
 
 export default async function ChatListPage() {
   const supabase = await createClient();
@@ -30,7 +30,6 @@ export default async function ChatListPage() {
             Ask questions about Indian startup compliance and get cited answers.
           </p>
         </div>
-        {/* Goes directly to a new chat interface, no intermediate step */}
         <form action={createNewChat}>
           <Button size="sm" className="gap-2 w-full sm:w-auto" type="submit">
             <Plus className="h-4 w-4" />
@@ -39,31 +38,10 @@ export default async function ChatListPage() {
         </form>
       </div>
 
-      {chats && chats.length > 0 ? (
+      {chats.length > 0 ? (
         <div className="grid gap-2">
           {chats.map((chat, idx) => (
-            <Link
-              key={chat.id}
-              href={`/chat/${chat.id}`}
-              className="interactive-item flex items-center gap-3 animate-fade-up"
-              style={{ animationDelay: `${idx * 50}ms` }}
-            >
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 shrink-0">
-                <MessageSquare className="h-4 w-4 text-primary" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-medium text-sm truncate">{chat.title}</p>
-                <p className="text-xs text-muted-foreground">
-                  {new Date(chat.updated_at).toLocaleDateString(undefined, {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </p>
-              </div>
-            </Link>
+            <ChatListItem key={chat.id} chat={chat} idx={idx} />
           ))}
         </div>
       ) : (

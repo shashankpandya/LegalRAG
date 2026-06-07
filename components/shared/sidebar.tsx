@@ -4,6 +4,7 @@ import { signOut } from "@/lib/actions/auth";
 import { createNewChat } from "@/lib/actions/chats";
 import { Button } from "@/components/ui/button";
 import { OnboardingTour } from "@/components/shared/onboarding-tour";
+import { SidebarChatItem } from "@/components/shared/sidebar-chat-item";
 import {
   LayoutDashboard,
   MessageSquare,
@@ -76,14 +77,7 @@ export function Sidebar({ user, chats }: SidebarProps) {
         {chats.length > 0 ? (
           <div className="space-y-0.5">
             {chats.map((chat) => (
-              <Link
-                key={chat.id}
-                href={`/chat/${chat.id}`}
-                className="block truncate rounded-md px-3 py-1.5 text-xs text-muted-foreground transition-colors duration-200 hover:bg-accent hover:text-accent-foreground"
-                title={chat.title}
-              >
-                {chat.title}
-              </Link>
+              <SidebarChatItem key={chat.id} chat={chat} />
             ))}
           </div>
         ) : (
