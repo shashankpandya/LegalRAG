@@ -29,6 +29,7 @@ interface IngestJob {
 /**
  * Creates a Supabase service-role client for job operations.
  * Used by seed.ts and ingest orchestration (server-only).
+ * Service-role key bypasses RLS — only used server-side.
  */
 function getServiceClient() {
   return createClient(
@@ -50,6 +51,7 @@ export async function createJob(
       user_id: userId,
       status: "pending",
       attempts: 0,
+      progress: {},
     })
     .select("id")
     .single();
@@ -67,9 +69,33 @@ export async function updateJob(
   },
 ): Promise<void> {
   const supabase = getServiceClient();
+
+  // Build update payload
+  const payload: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (updates.status !== undefined) payload.status = updates.status;
+  if (updates.error !== undefined) payload.error = updates.error;
+
+  // For progress: fetch current, merge, then write back.
+  // This ensures we don't clobber progress keys from prior steps.
+  if (updates.progress !== undefined) {
+    const { data: current } = await supabase
+      .from("ingest_jobs")
+      .select("progress")
+      .eq("id", jobId)
+      .single();
+
+    payload.progress = {
+      ...(current?.progress as Record<string, number> | null ?? {}),
+      ...updates.progress,
+    };
+  }
+
   const { error } = await supabase
     .from("ingest_jobs")
-    .update({ ...updates, updated_at: new Date().toISOString() })
+    .update(payload)
     .eq("id", jobId);
 
   if (error) throw new Error(`Failed to update ingest job: ${error.message}`);

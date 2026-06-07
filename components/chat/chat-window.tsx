@@ -44,11 +44,16 @@ export function ChatWindow({
   const router = useRouter();
   const initialFired = useRef(false);
 
+  // Auto-fire the initial question (from ?initial= param) once on mount.
+  // We intentionally omit handleSubmit from deps — it's defined in-scope
+  // and we only want this to run once when initialQuestion is set.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (initialQuestion && !initialFired.current && messages.length === 0) {
       initialFired.current = true;
       handleSubmit(initialQuestion);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQuestion]);
 
   useEffect(() => {

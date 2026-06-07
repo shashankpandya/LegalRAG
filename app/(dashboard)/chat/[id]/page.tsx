@@ -3,8 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { ChatWindow } from "@/components/chat/chat-window";
 
 interface ChatPageProps {
-  params: { id: string };
-  searchParams: { initial?: string };
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ initial?: string }>;
 }
 
 /**
@@ -12,8 +12,8 @@ interface ChatPageProps {
  * Loads message history from Supabase (RLS-scoped) and passes to ChatWindow.
  */
 export default async function ChatPage({ params, searchParams }: ChatPageProps) {
-  const { id } = params;
-  const { initial } = searchParams;
+  const { id } = await params;
+  const { initial } = await searchParams;
 
   const supabase = await createClient();
   const {

@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
 import { vectorStore } from "@/lib/rag/providers";
-import { COLLECTION_NAME } from "@/lib/rag/providers/types";
+import { COLLECTION_NAME, EMBEDDING_DIMENSION } from "@/lib/rag/providers/types";
 import type { Chunk } from "@/lib/rag/chunker";
 import { updateJob } from "./job";
 
@@ -23,7 +23,8 @@ function deterministicId(docId: string, chunkIndex: number): string {
 }
 
 /**
- * Upsert step — writes embedded chunks to Qdrant with full payload.
+ * Upsert step — ensures collection exists, then writes embedded chunks to
+ * Qdrant with full payload.
  * Idempotent via deterministic point IDs from (doc_id, chunk_index).
  */
 export async function upsertStep(
@@ -36,6 +37,10 @@ export async function upsertStep(
   vectors: number[][],
 ): Promise<number> {
   await updateJob(jobId, { status: "upserting" });
+
+  // Ensure the Qdrant collection exists before attempting to write.
+  // This is a no-op if it already exists (idempotent).
+  await vectorStore.ensureCollection(COLLECTION_NAME, EMBEDDING_DIMENSION);
 
   const points = chunks.map((chunk, i) => ({
     id: deterministicId(docId, chunk.chunkIndex),

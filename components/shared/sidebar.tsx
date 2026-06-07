@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { type User } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { OnboardingTour } from "@/components/shared/onboarding-tour";
@@ -23,17 +22,14 @@ const navItems = [
 
 interface SidebarProps {
   user: User;
+  chats: { id: string; title: string; updated_at: string }[];
 }
 
-export async function Sidebar({ user }: SidebarProps) {
-  const supabase = await createClient();
-
-  const { data: chats } = await supabase
-    .from("chats")
-    .select("id, title, updated_at")
-    .order("updated_at", { ascending: false })
-    .limit(30);
-
+/**
+ * Desktop sidebar — Server Component.
+ * Chats are fetched once in the layout and passed as a prop.
+ */
+export function Sidebar({ user, chats }: SidebarProps) {
   return (
     <aside className="hidden md:flex w-64 flex-col border-r bg-card" data-onboarding="sidebar-nav">
       <div className="flex items-center justify-between border-b px-4 py-3" data-onboarding="welcome">
@@ -67,7 +63,7 @@ export async function Sidebar({ user }: SidebarProps) {
             <Plus className="h-3.5 w-3.5 text-muted-foreground transition-colors hover:text-foreground" />
           </Link>
         </div>
-        {chats && chats.length > 0 ? (
+        {chats.length > 0 ? (
           <div className="space-y-0.5">
             {chats.map((chat) => (
               <Link
