@@ -64,34 +64,12 @@ export async function createChat(initialQuestionOrFormData?: string | FormData) 
 }
 
 /**
- * Create a blank chat and redirect directly to the chat interface.
- * Used by the + button in the sidebar and the "New chat" button on the chat list page.
- * The user types their first question inside the chat window.
+ * Navigate to the new-chat page (/chat/new).
+ * No DB row is created until the user sends their first message.
+ * This prevents empty "New chat" sessions from cluttering the history.
  */
 export async function createNewChat() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const { data: chat, error } = await supabase
-    .from("chats")
-    .insert({
-      user_id: user.id,
-      title: "New chat",
-    })
-    .select("id")
-    .single();
-
-  if (error) {
-    throw new Error(`Failed to create chat: ${error.message}`);
-  }
-
-  redirect(`/chat/${chat.id}`);
+  redirect("/chat/new");
 }
 
 /**
