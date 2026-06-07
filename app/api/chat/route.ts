@@ -9,12 +9,22 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 /**
- * POST /api/chat — the money endpoint.
+ * Turn a question into a clean chat title (max 60 chars).
+ */
+function makeChatTitle(question: string): string {
+  const cleaned = question.trim().replace(/[?!.]+$/, "").trim();
+  if (cleaned.length <= 60) return cleaned;
+  const truncated = cleaned.slice(0, 60);
+  const lastSpace = truncated.lastIndexOf(" ");
+  return lastSpace > 30 ? truncated.slice(0, lastSpace) + "…" : truncated + "…";
+}
+
+/**
+ * POST /api/chat — streaming RAG endpoint.
  *
- * Auth → validate → insert user msg → retrieve → stream SSE (citations + tokens)
- * → persist assistant msg → update chat → [DONE]
- *
- * See: docs/api/chat-endpoint.md
+ * Auth → validate → insert user msg → retrieve context → stream SSE
+ * (citations event + token events + [DONE]) → persist assistant msg
+ * → auto-title chat if still "New chat" → update timestamp
  */
 export async function POST(req: Request) {
   try {
@@ -61,10 +71,10 @@ export async function POST(req: Request) {
 
     const { chatId, question, history } = parsed.data;
 
-    // 3. Verify chat ownership (RLS + explicit check)
+    // 3. Verify chat ownership (RLS + explicit check) + check current title
     const { data: chat } = await supabase
       .from("chats")
-      .select("id")
+      .select("id, title")
       .eq("id", chatId)
       .single();
 
@@ -79,11 +89,11 @@ export async function POST(req: Request) {
       content: question,
     });
 
-    // 5. Retrieve relevant context
+    // 5. Retrieve relevant context from Qdrant
     const contexts = await retrieve(question, user.id);
 
-    // 6. Build messages for LLM
-    const slicedHistory = (history || []).slice(-6); // last 3 turns
+    // 6. Build LLM messages
+    const slicedHistory = (history || []).slice(-6);
     const llmMessages = [
       { role: "system" as const, content: SYSTEM_PROMPT },
       ...slicedHistory.map((h) => ({
@@ -96,14 +106,24 @@ export async function POST(req: Request) {
       },
     ];
 
-    // 7. Open SSE stream
+    // 7. Stream SSE
     const encoder = new TextEncoder();
     let fullResponse = "";
+
+    // Auto-title: if the chat is still "New chat", update it from the question.
+    // Do this before streaming so the sidebar refreshes correctly.
+    const isFirstMessage = chat.title === "New chat";
+    if (isFirstMessage) {
+      await supabase
+        .from("chats")
+        .update({ title: makeChatTitle(question) })
+        .eq("id", chatId);
+    }
 
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          // Emit citations event first
+          // Emit citations first so the UI can render them before tokens arrive
           const citationsEvent = {
             type: "citations",
             citations: contexts.map((c) => ({
@@ -117,7 +137,7 @@ export async function POST(req: Request) {
             encoder.encode(`data: ${JSON.stringify(citationsEvent)}\n\n`),
           );
 
-          // Stream tokens from LLM
+          // Stream tokens
           for await (const token of llm.stream(llmMessages, {
             model: "llama-3.3-70b-versatile",
             temperature: 0.2,
@@ -131,7 +151,7 @@ export async function POST(req: Request) {
             );
           }
 
-          // Persist assistant message with citations
+          // Persist assistant message
           await supabase.from("messages").insert({
             chat_id: chatId,
             role: "assistant",
@@ -143,13 +163,12 @@ export async function POST(req: Request) {
             })),
           });
 
-          // Update chat timestamp
+          // Update chat timestamp so it rises to top of sidebar list
           await supabase
             .from("chats")
             .update({ updated_at: new Date().toISOString() })
             .eq("id", chatId);
 
-          // Emit done
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           controller.close();
         } catch (error) {

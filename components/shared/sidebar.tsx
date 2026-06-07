@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { type User } from "@supabase/supabase-js";
 import { signOut } from "@/lib/actions/auth";
+import { createNewChat } from "@/lib/actions/chats";
 import { Button } from "@/components/ui/button";
 import { OnboardingTour } from "@/components/shared/onboarding-tour";
 import {
@@ -59,10 +60,19 @@ export function Sidebar({ user, chats }: SidebarProps) {
           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Recent Chats
           </span>
-          <Link href="/chat" title="All chats" aria-label="Start new chat">
-            <Plus className="h-3.5 w-3.5 text-muted-foreground transition-colors hover:text-foreground" />
-          </Link>
+          {/* + button → creates a new chat and goes straight to chat interface */}
+          <form action={createNewChat}>
+            <button
+              type="submit"
+              title="New chat"
+              aria-label="Start a new chat"
+              className="rounded-sm p-0.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          </form>
         </div>
+
         {chats.length > 0 ? (
           <div className="space-y-0.5">
             {chats.map((chat) => (

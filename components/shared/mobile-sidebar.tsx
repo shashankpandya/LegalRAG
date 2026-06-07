@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
-import { type User } from "@supabase/supabase-js";
 import {
   LayoutDashboard,
   MessageSquare,
@@ -12,14 +11,14 @@ import {
   LogOut,
   Scale,
   Plus,
-  HelpCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/lib/actions/auth";
+import { createNewChat } from "@/lib/actions/chats";
 import { OnboardingTour } from "@/components/shared/onboarding-tour";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, onboarding: "ask-question" },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/documents", label: "Documents", icon: FileText },
   { href: "/compliance", label: "Compliance", icon: ClipboardCheck },
@@ -90,10 +89,19 @@ export function MobileSidebar({ user, chats }: MobileSidebarProps) {
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Recent Chats
                 </span>
-                <Link href="/chat" title="All chats" onClick={() => setOpen(false)}>
-                  <Plus className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
-                </Link>
+                {/* + creates a new chat and goes directly to the chat interface */}
+                <form action={createNewChat}>
+                  <button
+                    type="submit"
+                    title="New chat"
+                    aria-label="Start a new chat"
+                    className="rounded-sm p-0.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                  </button>
+                </form>
               </div>
+
               {chats && chats.length > 0 ? (
                 <div className="space-y-0.5">
                   {chats.slice(0, 10).map((chat) => (
@@ -101,7 +109,7 @@ export function MobileSidebar({ user, chats }: MobileSidebarProps) {
                       key={chat.id}
                       href={`/chat/${chat.id}`}
                       onClick={() => setOpen(false)}
-                      className="block truncate rounded-md px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground min-h-[44px] flex items-center"
+                      className="flex items-center truncate rounded-md px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground min-h-[44px]"
                     >
                       {chat.title}
                     </Link>
