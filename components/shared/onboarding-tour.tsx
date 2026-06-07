@@ -63,6 +63,7 @@ export function OnboardingTour() {
       const timer = setTimeout(() => startTour(), 1200);
       return () => clearTimeout(timer);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function startTour() {

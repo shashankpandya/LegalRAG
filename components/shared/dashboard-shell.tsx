@@ -1,8 +1,8 @@
 "use client";
 
-import { OnboardingTour } from "@/components/shared/onboarding-tour";
 import { CookieConsent, reopenCookieConsent } from "@/components/shared/cookie-consent";
 import { MobileSidebar } from "@/components/shared/mobile-sidebar";
+import { OnboardingTour } from "@/components/shared/onboarding-tour";
 import { Scale, Cookie } from "lucide-react";
 import Link from "next/link";
 
@@ -37,7 +37,13 @@ export function DashboardShell({ chats, userEmail }: DashboardShellProps) {
   );
 }
 
-function MobileHeader({ chats, userEmail }: DashboardShellProps) {
+function MobileHeader({
+  chats,
+  userEmail,
+}: {
+  chats: { id: string; title: string; updated_at: string }[];
+  userEmail: string;
+}) {
   return (
     <header className="md:hidden flex items-center justify-between border-b bg-card px-4 py-2">
       <div className="flex items-center gap-2">

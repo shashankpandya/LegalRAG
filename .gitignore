@@ -36,3 +36,6 @@ next-env.d.ts
 
 # seed PDFs (large binaries — not tracked)
 /seed-pdfs/
+
+
+/.vscode/
