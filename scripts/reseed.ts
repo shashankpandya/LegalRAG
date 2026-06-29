@@ -2,12 +2,13 @@
  * Force re-seed script — wipes stale public document records from Supabase
  * and re-ingests all PDFs from seed-pdfs/ into Qdrant.
  *
- * Run: pnpm tsx --env-file=.env.local scripts/reseed.ts
+ * Run: npx tsx scripts/reseed.ts
  *
  * Use this when Qdrant has been reset or vectors are missing despite
  * Supabase showing documents as "ready".
  */
 
+import "./_load-env";
 import * as fs from "fs";
 import * as path from "path";
 import WebSocket from "ws";

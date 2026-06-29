@@ -36,9 +36,9 @@ export async function POST(req: Request) {
       console.error("[/api/ingest] Missing env vars:", envCheck.missing);
       return Response.json(
         {
-          error: "Server configuration error",
-          details: `Missing environment variables: ${envCheck.missing.join(", ")}`,
-          hint: "Please configure all required API keys in Vercel project settings",
+          error: "Server configuration error — missing required API keys",
+          details: `Missing: ${envCheck.missing.join(", ")}`,
+          hint: `Add these to your .env.local file: ${envCheck.missing.join(", ")}`,
         },
         { status: 500 },
       );
@@ -175,19 +175,39 @@ export async function POST(req: Request) {
         let userMessage = message;
         let hint = "";
 
-        if (message.includes("Jina") || message.includes("embedding")) {
-          hint = "Check your JINA_API_KEY in Vercel environment variables";
-        } else if (message.includes("Qdrant") || message.includes("vector")) {
-          hint = "Check your QDRANT_URL and QDRANT_API_KEY in Vercel environment variables";
-        } else if (message.includes("fetch") || message.includes("network") || message.includes("ENOTFOUND")) {
-          hint = "Network error - verify your API endpoints and internet connection";
+        const isQdrantError =
+          message.includes("Qdrant") ||
+          message.includes("Not Found") ||
+          message.includes("404") ||
+          message.includes("vector") ||
+          message.includes("collection");
+
+        const isJinaError =
+          message.includes("Jina") ||
+          message.includes("embedding") ||
+          message.includes("jina");
+
+        const isNetworkError =
+          message.includes("fetch") ||
+          message.includes("network") ||
+          message.includes("ENOTFOUND") ||
+          message.includes("ECONNREFUSED") ||
+          message.includes("timeout");
+
+        if (isJinaError) {
+          userMessage = "Embedding service error — document could not be indexed";
+          hint = "Your JINA_API_KEY may be invalid or exhausted. Get a new key at jina.ai and update JINA_API_KEY in .env.local";
+        } else if (isQdrantError) {
+          userMessage = "Vector database error — the Qdrant cluster may have been deleted or is unreachable";
+          hint = "Create a new cluster at cloud.qdrant.io, then update QDRANT_URL and QDRANT_API_KEY in .env.local";
+        } else if (isNetworkError) {
+          hint = "Network error — verify your API endpoints and internet connection";
+        } else {
+          hint = "Check the server console for the full error. Common causes: expired API keys, deleted vector database cluster.";
         }
 
         return Response.json(
-          {
-            error: userMessage,
-            hint: hint || "Check Vercel logs for detailed error stack trace",
-          },
+          { error: userMessage, hint },
           { status: 500 },
         );
       }
@@ -207,7 +227,7 @@ export async function POST(req: Request) {
     return Response.json(
       {
         error: error instanceof Error ? error.message : "Unknown error",
-        hint: "Check Vercel logs for detailed error stack trace",
+        hint: "Check the server console for the full error stack trace.",
       },
       { status: 500 },
     );

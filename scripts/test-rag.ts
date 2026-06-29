@@ -1,9 +1,10 @@
+import "./_load-env";
 import { retrieve } from "../lib/rag/retrieve";
 
 /**
  * Test RAG harness — the M2 checkpoint.
  *
- * Run: pnpm tsx scripts/test-rag.ts
+ * Run: npx tsx scripts/test-rag.ts
  *
  * Hardcodes 3 canonical questions and prints top-5 reranked chunks.
  * Do NOT proceed to Sprint 04 until these return sensible results.

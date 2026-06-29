@@ -38,9 +38,13 @@ export async function GET() {
     await client.getCollections();
     checks.qdrant = { ok: true, message: "Connected" };
   } catch (err) {
+    const msg = err instanceof Error ? err.message : "Connection failed";
+    const isGone = msg.includes("Not Found") || msg.includes("404");
     checks.qdrant = {
       ok: false,
-      message: err instanceof Error ? err.message : "Connection failed",
+      message: isGone
+        ? "Cluster not found (404) — it may have been deleted. Create a new one at cloud.qdrant.io"
+        : msg,
     };
   }
 

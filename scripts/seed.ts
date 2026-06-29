@@ -1,3 +1,4 @@
+import "./_load-env";
 import * as fs from "fs";
 import * as path from "path";
 import WebSocket from "ws";
