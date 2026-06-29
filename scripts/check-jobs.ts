@@ -1,3 +1,4 @@
+import "./_load-env";
 import WebSocket from "ws";
 if (typeof globalThis.WebSocket === "undefined") {
   // @ts-expect-error

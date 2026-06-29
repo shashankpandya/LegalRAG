@@ -1,11 +1,12 @@
 /**
  * RAG Diagnostic Script
- * Run: pnpm tsx --env-file=.env.local scripts/diagnose-rag.ts
+ * Run: npx tsx scripts/diagnose-rag.ts
  *
  * Tests each layer of the RAG pipeline independently and reports
  * exactly where the failure is.
  */
 
+import "./_load-env";
 import WebSocket from "ws";
 if (typeof globalThis.WebSocket === "undefined") {
   // @ts-expect-error
