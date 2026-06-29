@@ -62,13 +62,15 @@ export function CookieConsent() {
     }
   }, []);
 
-  const acceptAll = useCallback(() => {
+  const acceptAll = useCallback((e?: React.MouseEvent) => {
+    e?.stopPropagation();
     const allAccepted: CookiePreferences = { essential: true, analytics: true, marketing: true };
     storePreferences(allAccepted);
     setVisible(false);
   }, []);
 
-  const acceptEssential = useCallback(() => {
+  const acceptEssential = useCallback((e?: React.MouseEvent) => {
+    e?.stopPropagation();
     const essentialOnly: CookiePreferences = { essential: true, analytics: false, marketing: false };
     storePreferences(essentialOnly);
     setVisible(false);
@@ -85,7 +87,7 @@ export function CookieConsent() {
   return (
     <>
       <div
-        className="fixed inset-x-0 bottom-0 z-50 animate-in slide-in-from-bottom-4 duration-500"
+        className="fixed inset-x-0 bottom-0 z-50 animate-in slide-in-from-bottom-4 duration-500 pointer-events-auto"
         role="dialog"
         aria-label="Cookie consent"
         aria-modal="false"
@@ -165,30 +167,34 @@ export function CookieConsent() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={acceptEssential}
+                  onClick={(e) => acceptEssential(e)}
                   className="order-3 sm:order-1 text-xs sm:text-sm"
                   aria-label="Accept only essential cookies"
+                  type="button"
                 >
                   Only Essential
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setPreferences(getStoredPreferences() ?? defaultPreferences);
                     setCustomizeOpen(true);
                   }}
                   className="order-2 gap-1.5 text-xs sm:text-sm"
                   aria-label="Customize cookie preferences"
+                  type="button"
                 >
                   <Settings className="h-3.5 w-3.5" />
                   Customize
                 </Button>
                 <Button
                   size="sm"
-                  onClick={acceptAll}
+                  onClick={(e) => acceptAll(e)}
                   className="order-1 sm:order-3 text-xs sm:text-sm"
                   aria-label="Accept all cookies"
+                  type="button"
                 >
                   Accept All
                 </Button>
@@ -232,10 +238,10 @@ export function CookieConsent() {
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={acceptEssential} className="text-xs sm:text-sm">
+            <Button variant="outline" onClick={(e) => acceptEssential(e)} className="text-xs sm:text-sm" type="button">
               Reject Optional
             </Button>
-            <Button onClick={saveCustomized} className="text-xs sm:text-sm">
+            <Button onClick={saveCustomized} className="text-xs sm:text-sm" type="button">
               Save Preferences
             </Button>
           </DialogFooter>

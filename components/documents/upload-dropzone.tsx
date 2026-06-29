@@ -62,8 +62,9 @@ export function UploadDropzone() {
           
           setErrorInfo({ error: errorMessage, hint: hint || undefined });
           setUploadStatus("error");
+          setUploading(false);
           
-          toast.error(errorMessage);
+          toast.error(errorMessage, { duration: 6000 });
           
           // Show hint in console for debugging
           if (hint) {
@@ -73,26 +74,27 @@ export function UploadDropzone() {
         }
 
         setUploadStatus("success");
-        toast.success(`${file.name} uploaded (${data.chunkCount} chunks)`);
+        toast.success(
+          `${file.name} uploaded — ${data.chunkCount ?? 0} chunks indexed across ${data.pageCount ?? 0} pages`,
+          { duration: 5000 }
+        );
         router.refresh();
         
         // Reset status after success animation
         setTimeout(() => {
           setUploadStatus("idle");
           setFileName(null);
-        }, 2000);
+          setUploading(false);
+        }, 2500);
       } catch {
         const errorMessage = "Upload failed — check your connection";
         setErrorInfo({ error: errorMessage });
         setUploadStatus("error");
+        setUploading(false);
         toast.error(errorMessage);
-      } finally {
-        if (uploadStatus !== "success") {
-          setUploading(false);
-        }
       }
     },
-    [router, uploadStatus],
+    [router],
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -166,6 +168,7 @@ export function UploadDropzone() {
               {errorInfo && (
                 <p className="text-xs text-muted-foreground mt-1 max-w-sm">{errorInfo.error}</p>
               )}
+              <p className="text-xs text-primary mt-2 font-medium">Click or drop a file to try again</p>
             </div>
           </div>
         ) : isDragActive ? (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Scale } from "lucide-react";
@@ -15,10 +15,21 @@ import { MessageInput } from "./message-input";
  *    → ChatWindow fires the question automatically via ?initial=
  *
  * This ensures empty sessions are never saved to the DB.
+ * Accepts an optional `prefill` prop to pre-fill the input (e.g. from Documents page).
  */
-export function NewChatWindow() {
+export function NewChatWindow({ prefill }: { prefill?: string }) {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const prefillFired = useRef(false);
+
+  // If a prefill question was passed (e.g. from Documents → "Ask about"), auto-submit it
+  useEffect(() => {
+    if (prefill && !prefillFired.current) {
+      prefillFired.current = true;
+      handleSubmit(decodeURIComponent(prefill));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefill]);
 
   async function handleSubmit(question: string) {
     if (!question.trim() || isLoading) return;
