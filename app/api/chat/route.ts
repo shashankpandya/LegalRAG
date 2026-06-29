@@ -90,7 +90,22 @@ export async function POST(req: Request) {
     });
 
     // 5. Retrieve relevant context from Qdrant
-    const contexts = await retrieve(question, user.id);
+    // Wrap in a timeout so a Qdrant/Jina outage doesn't hang the stream forever
+    let contexts: Awaited<ReturnType<typeof retrieve>> = [];
+    let retrieveError: string | null = null;
+    try {
+      const retrieveWithTimeout = Promise.race([
+        retrieve(question, user.id),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Retrieval timed out after 15s")), 15_000),
+        ),
+      ]);
+      contexts = await retrieveWithTimeout;
+    } catch (err) {
+      retrieveError = err instanceof Error ? err.message : "Retrieval failed";
+      console.warn("[/api/chat] Retrieval error (continuing with empty context):", retrieveError);
+      // Continue with empty context rather than failing the whole request
+    }
 
     // 6. Build LLM messages
     const slicedHistory = (history || []).slice(-6);
@@ -132,6 +147,8 @@ export async function POST(req: Request) {
               doc_id: c.docId,
               snippet: c.parentText.slice(0, 200),
             })),
+            hasContext: contexts.length > 0,
+            retrieveError,
           };
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify(citationsEvent)}\n\n`),

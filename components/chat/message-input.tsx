@@ -3,14 +3,15 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { SendHorizontal, Sparkles } from "lucide-react";
+import { SendHorizontal, Sparkles, Square } from "lucide-react";
 
 interface MessageInputProps {
   onSubmit: (question: string) => void;
+  onCancel?: () => void;
   isLoading: boolean;
 }
 
-export function MessageInput({ onSubmit, isLoading }: MessageInputProps) {
+export function MessageInput({ onSubmit, onCancel, isLoading }: MessageInputProps) {
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -28,6 +29,10 @@ export function MessageInput({ onSubmit, isLoading }: MessageInputProps) {
     onSubmit(trimmed);
     setValue("");
     textareaRef.current?.focus();
+  }
+
+  function handleCancel() {
+    if (onCancel) onCancel();
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -61,7 +66,7 @@ export function MessageInput({ onSubmit, isLoading }: MessageInputProps) {
         <div className="relative flex-1">
           <Textarea
             ref={textareaRef}
-            placeholder="Ask about Indian startup compliance..."
+            placeholder="Ask about Indian startup compliance…"
             value={value}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
@@ -77,19 +82,32 @@ export function MessageInput({ onSubmit, isLoading }: MessageInputProps) {
             </span>
           )}
         </div>
-        <Button
-          onClick={handleSubmit}
-          disabled={!value.trim() || isLoading}
-          size="icon"
-          className="shrink-0 touch-target h-[44px] w-[44px] transition-all duration-200"
-          aria-label="Send message"
-        >
-          {isLoading ? (
-            <Sparkles className="h-4 w-4 animate-pulse" />
-          ) : (
-            <SendHorizontal className="h-4 w-4" />
-          )}
-        </Button>
+        {isLoading && onCancel ? (
+          <Button
+            onClick={handleCancel}
+            variant="outline"
+            size="icon"
+            className="shrink-0 touch-target h-[44px] w-[44px] transition-all duration-200 border-destructive/50 text-destructive hover:bg-destructive/10"
+            aria-label="Cancel request"
+            title="Cancel"
+          >
+            <Square className="h-4 w-4 fill-current" />
+          </Button>
+        ) : (
+          <Button
+            onClick={handleSubmit}
+            disabled={!value.trim() || isLoading}
+            size="icon"
+            className="shrink-0 touch-target h-[44px] w-[44px] transition-all duration-200"
+            aria-label="Send message"
+          >
+            {isLoading ? (
+              <Sparkles className="h-4 w-4 animate-pulse" />
+            ) : (
+              <SendHorizontal className="h-4 w-4" />
+            )}
+          </Button>
+        )}
       </div>
       
       {/* Tips when empty */}

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { seedComplianceItems } from "@/lib/actions/compliance";
 import { ComplianceChecklist } from "@/components/compliance/checklist";
+import { ComplianceProgress } from "@/components/compliance/compliance-progress";
 
 const CATEGORY_LABELS: Record<string, { label: string; icon: string }> = {
   incorporation: { label: "Incorporation", icon: "🏛️" },
@@ -63,27 +64,7 @@ export default async function CompliancePage() {
       </div>
 
       {totalItems > 0 && (
-        <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-            <span className="text-lg">{completedItems === totalItems ? "🎉" : "📊"}</span>
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium">
-              {completedItems === totalItems
-                ? "All compliance items complete!"
-                : `${completedItems} of ${totalItems} items completed`}
-            </p>
-            <div className="mt-1.5 h-2 w-full rounded-full bg-muted overflow-hidden">
-              <div
-                className="h-full rounded-full bg-primary transition-all duration-500 ease-out"
-                style={{ width: `${(completedItems / totalItems) * 100}%` }}
-              />
-            </div>
-          </div>
-          <span className="text-xs font-medium text-muted-foreground">
-            {Math.round((completedItems / totalItems) * 100)}%
-          </span>
-        </div>
+        <ComplianceProgress totalItems={totalItems} initialCompleted={completedItems} />
       )}
 
       {grouped.length > 0 ? (

@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import { MessageBubble } from "./message-bubble";
 import { MessageInput } from "./message-input";
 import { CitationCard, type Citation } from "./citation-card";
-import { Scale, MessageSquare, AlertCircle, Loader2 } from "lucide-react";
+import { Scale, AlertCircle, Loader2, WifiOff } from "lucide-react";
+import { useServiceHealth } from "@/lib/hooks/use-service-health";
 
 interface Message {
   id: string;
@@ -43,6 +44,8 @@ export function ChatWindow({
   const scrollRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const initialFired = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const health = useServiceHealth();
 
   // Auto-fire the initial question (from ?initial= param) once on mount.
   // We intentionally omit handleSubmit from deps — it's defined in-scope
@@ -80,6 +83,14 @@ export function ChatWindow({
     setRetrieveError(null);
     setIsLoading(true);
 
+    // Abort controller for request cancellation / cleanup
+    const abortController = new AbortController();
+    abortRef.current = abortController;
+    // Client-side watchdog: if no [DONE] arrives in 90s, abort
+    const watchdog = setTimeout(() => {
+      abortController.abort();
+    }, 90_000);
+
     try {
       const history = messages
         .filter((m) => m.role === "user" || m.role === "assistant")
@@ -90,12 +101,14 @@ export function ChatWindow({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ chatId, question, history }),
+        signal: abortController.signal,
       });
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "Request failed" }));
         toast.error(err.error || `Error ${res.status}`);
         setIsLoading(false);
+        clearTimeout(watchdog);
         return;
       }
 
@@ -103,6 +116,9 @@ export function ChatWindow({
       const decoder = new TextDecoder();
       let buffer = "";
       let fullText = "";
+      let receivedDone = false;
+      // Track citations locally to avoid stale closure captures
+      let localCitations: Citation[] = [];
 
       while (true) {
         const { value, done } = await reader.read();
@@ -118,11 +134,12 @@ export function ChatWindow({
           const data = line.slice(6).trim();
 
           if (data === "[DONE]") {
+            receivedDone = true;
             const assistantMessage: Message = {
               id: `assistant-${Date.now()}`,
               role: "assistant",
               content: fullText,
-              citations: citations.map((c) => ({
+              citations: localCitations.map((c) => ({
                 doc_id: c.doc_id,
                 doc_name: c.doc_name,
                 page: c.page,
@@ -132,6 +149,7 @@ export function ChatWindow({
             setMessages((prev) => [...prev, assistantMessage]);
             setStreamingText("");
             setIsLoading(false);
+            clearTimeout(watchdog);
             router.refresh();
             return;
           }
@@ -140,7 +158,8 @@ export function ChatWindow({
             const event = JSON.parse(data) as CitationEvent | { type: string; token?: string; message?: string };
             if (event.type === "citations") {
               const citationEvent = event as CitationEvent;
-              setCitations(citationEvent.citations || []);
+              localCitations = citationEvent.citations || [];
+              setCitations(localCitations);
               setHasContext(citationEvent.hasContext ?? true);
               setRetrieveError(citationEvent.retrieveError || null);
             } else if (event.type === "token") {
@@ -149,39 +168,91 @@ export function ChatWindow({
             } else if (event.type === "error") {
               toast.error(event.message || "Stream error");
               setIsLoading(false);
+              clearTimeout(watchdog);
               return;
             }
           } catch {
+            // Ignore malformed SSE lines
           }
         }
       }
+
+      // Stream ended without [DONE] — surface an error if we got no text
+      if (!receivedDone) {
+        if (!fullText) {
+          toast.error("The AI didn't return a response. Please try again.");
+        } else {
+          // Partial response — still show it
+          const assistantMessage: Message = {
+            id: `assistant-${Date.now()}`,
+            role: "assistant",
+            content: fullText,
+            citations: localCitations.map((c) => ({
+              doc_id: c.doc_id,
+              doc_name: c.doc_name,
+              page: c.page,
+            })),
+            created_at: new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, assistantMessage]);
+          setStreamingText("");
+          toast.warning("Response may be incomplete.");
+        }
+        setIsLoading(false);
+        clearTimeout(watchdog);
+      }
     } catch (error) {
-      toast.error("Failed to send message. Please try again.");
+      clearTimeout(watchdog);
+      if (error instanceof Error && error.name === "AbortError") {
+        toast.error("Request timed out. The service may be temporarily unavailable — please try again.");
+      } else {
+        toast.error("Failed to send message. Please check your connection and try again.");
+      }
       setIsLoading(false);
+    }
+  }
+
+  function handleCancel() {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
     }
   }
 
   return (
     <div className="flex h-full flex-col">
+      {/* Service degraded banner */}
+      {health.status === "degraded" && (
+        <div className="flex items-center gap-2 px-4 py-2 border-b bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
+          <WifiOff className="h-4 w-4 text-amber-600 shrink-0" />
+          <span className="text-xs text-amber-800 dark:text-amber-200">
+            Some backend services may be unavailable. Answers could be limited or delayed.
+            {health.message && (
+              <span className="ml-1 opacity-70">({health.message})</span>
+            )}
+          </span>
+        </div>
+      )}
+
       {/* Context status indicator */}
       {isLoading && (
         <div className="flex items-center gap-2 px-4 py-2 border-b bg-muted/30">
           {retrieveError ? (
             <>
-              <AlertCircle className="h-4 w-4 text-amber-500" />
-              <span className="text-xs text-muted-foreground">Retrieval unavailable</span>
+              <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />
+              <span className="text-xs text-muted-foreground">Knowledge base unavailable — answering from general training</span>
             </>
-          ) : hasContext ? (
+          ) : citations.length > 0 ? (
             <>
-              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse shrink-0" />
               <span className="text-xs text-muted-foreground">
-                {citations.length > 0 ? `${citations.length} source${citations.length > 1 ? 's' : ''} found` : 'Searching knowledge base...'}
+                {`${citations.length} source${citations.length > 1 ? "s" : ""} found — generating answer…`}
               </span>
             </>
           ) : (
             <>
-              <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Searching documents...</span>
+              <Loader2 className="h-3 w-3 animate-spin text-muted-foreground shrink-0" />
+              <span className="text-xs text-muted-foreground">Searching knowledge base…</span>
             </>
           )}
         </div>
@@ -256,7 +327,7 @@ export function ChatWindow({
       )}
 
       <div className="border-t bg-background px-3 sm:px-4 py-3 sm:py-4">
-        <MessageInput onSubmit={handleSubmit} isLoading={isLoading} />
+        <MessageInput onSubmit={handleSubmit} onCancel={handleCancel} isLoading={isLoading} />
       </div>
     </div>
   );
