@@ -2,9 +2,15 @@
 
 import { CookieConsent, reopenCookieConsent } from "@/components/shared/cookie-consent";
 import { MobileSidebar } from "@/components/shared/mobile-sidebar";
-import { OnboardingTour } from "@/components/shared/onboarding-tour";
-import { Scale, Cookie } from "lucide-react";
+import { Cookie, Scale } from "lucide-react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+
+// Lazy-load the onboarding tour — it's never needed on first paint
+const OnboardingTour = dynamic(
+  () => import("@/components/shared/onboarding-tour").then((m) => ({ default: m.OnboardingTour })),
+  { ssr: false, loading: () => <div className="h-8 w-8" /> },
+);
 
 interface DashboardShellProps {
   chats: { id: string; title: string; updated_at: string }[];

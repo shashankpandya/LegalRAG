@@ -1,16 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense, lazy } from "react";
 import { toast } from "sonner";
-import { Scale, User, Copy, Check } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { Scale, User, Copy, Check, BookOpen, ChevronDown, ChevronUp } from "lucide-react";
+import { CitationCard } from "./citation-card";
+
+// Lazy-load the markdown renderer — ~40 KB gzipped, only needed for
+// assistant messages, so excluded from the initial JS bundle.
+const MarkdownRenderer = lazy(() => import("./markdown-renderer"));
 
 interface Message {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
-  citations?: { doc_id: string; doc_name: string; page: number }[] | null;
+  citations?: { doc_id: string; doc_name: string; page: number; snippet?: string }[] | null;
   created_at: string;
 }
 
@@ -22,6 +25,21 @@ interface MessageBubbleProps {
 export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
+  const [citationsExpanded, setCitationsExpanded] = useState(true);
+
+  // Deduplicate citations by doc_id + page so the same page isn't listed twice
+  const citations = message.citations
+    ? Array.from(
+        new Map(
+          message.citations.map((c) => [`${c.doc_id}::${c.page}`, c]),
+        ).values(),
+      ).map((c) => ({
+        doc_id: c.doc_id,
+        doc_name: c.doc_name,
+        page: c.page,
+        snippet: c.snippet,
+      }))
+    : [];
 
   async function handleCopy() {
     try {
@@ -38,11 +56,12 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
     <div className={`group flex gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
       {!isUser && (
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20">
-          <Scale className="h-4 w-4 text-primary" />
+          <Scale className="h-4 w-4 text-primary" aria-hidden="true" />
         </div>
       )}
 
-      <div className="relative max-w-[85%] sm:max-w-[75%]">
+      <div className="relative max-w-[85%] sm:max-w-[75%] min-w-0">
+        {/* Message bubble */}
         <div
           className={`rounded-lg px-3 py-2.5 sm:px-4 sm:py-3 text-sm ${
             isUser
@@ -51,8 +70,8 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
           }`}
         >
           {isStreaming ? (
-            <span className="flex items-center gap-1.5 text-muted-foreground">
-              <span className="flex gap-0.5">
+            <span className="flex items-center gap-1.5 text-muted-foreground" aria-label="Thinking">
+              <span className="flex gap-0.5" aria-hidden="true">
                 <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current" style={{ animationDelay: "0ms" }} />
                 <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current" style={{ animationDelay: "150ms" }} />
                 <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current" style={{ animationDelay: "300ms" }} />
@@ -60,114 +79,83 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
               Thinking
             </span>
           ) : isUser ? (
-            // User messages: plain text, no markdown
             <div className="whitespace-pre-wrap break-words leading-relaxed">
               {message.content}
             </div>
           ) : (
-            // Assistant messages: full markdown rendering
-            <div className="prose-chat">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  // Headings
-                  h1: ({ children }) => (
-                    <h1 className="text-base font-bold mt-3 mb-1.5 first:mt-0">{children}</h1>
-                  ),
-                  h2: ({ children }) => (
-                    <h2 className="text-sm font-bold mt-3 mb-1.5 first:mt-0">{children}</h2>
-                  ),
-                  h3: ({ children }) => (
-                    <h3 className="text-sm font-semibold mt-2 mb-1 first:mt-0">{children}</h3>
-                  ),
-                  // Paragraphs
-                  p: ({ children }) => (
-                    <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>
-                  ),
-                  // Bold & italic
-                  strong: ({ children }) => (
-                    <strong className="font-semibold text-foreground">{children}</strong>
-                  ),
-                  em: ({ children }) => (
-                    <em className="italic">{children}</em>
-                  ),
-                  // Unordered list
-                  ul: ({ children }) => (
-                    <ul className="my-2 ml-4 space-y-1 list-disc">{children}</ul>
-                  ),
-                  // Ordered list
-                  ol: ({ children }) => (
-                    <ol className="my-2 ml-4 space-y-1 list-decimal">{children}</ol>
-                  ),
-                  li: ({ children }) => (
-                    <li className="leading-relaxed pl-0.5">{children}</li>
-                  ),
-                  // Inline code
-                  code: ({ children, className }) => {
-                    const isBlock = className?.includes("language-");
-                    if (isBlock) {
-                      return (
-                        <code className="block bg-background/60 rounded-md px-3 py-2 text-xs font-mono my-2 overflow-x-auto whitespace-pre">
-                          {children}
-                        </code>
-                      );
-                    }
-                    return (
-                      <code className="bg-background/60 rounded px-1 py-0.5 text-xs font-mono">
-                        {children}
-                      </code>
-                    );
-                  },
-                  // Code block wrapper
-                  pre: ({ children }) => (
-                    <pre className="my-2 rounded-md bg-background/60 overflow-x-auto">
-                      {children}
-                    </pre>
-                  ),
-                  // Horizontal rule
-                  hr: () => (
-                    <hr className="my-3 border-border/50" />
-                  ),
-                  // Blockquote
-                  blockquote: ({ children }) => (
-                    <blockquote className="border-l-2 border-primary/40 pl-3 my-2 italic text-muted-foreground">
-                      {children}
-                    </blockquote>
-                  ),
-                  // Links
-                  a: ({ href, children }) => (
-                    <a
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary underline underline-offset-2 hover:text-primary/80"
-                    >
-                      {children}
-                    </a>
-                  ),
-                }}
-              >
-                {message.content}
-              </ReactMarkdown>
-            </div>
+            <Suspense fallback={
+              <div className="animate-pulse space-y-1.5">
+                <div className="h-3 w-full rounded bg-muted-foreground/10" />
+                <div className="h-3 w-4/5 rounded bg-muted-foreground/10" />
+                <div className="h-3 w-3/5 rounded bg-muted-foreground/10" />
+              </div>
+            }>
+              <MarkdownRenderer content={message.content} />
+            </Suspense>
           )}
         </div>
 
+        {/* ── Persistent citations — shown permanently under every assistant message ── */}
+        {!isUser && !isStreaming && citations.length > 0 && (
+          <div className="mt-2.5 rounded-lg border bg-card/60 overflow-hidden">
+            {/* Collapsible header */}
+            <button
+              onClick={() => setCitationsExpanded((v) => !v)}
+              className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left hover:bg-accent/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+              aria-expanded={citationsExpanded}
+              aria-controls={`citations-${message.id}`}
+            >
+              <div className="flex items-center gap-1.5">
+                <BookOpen className="h-3.5 w-3.5 text-primary shrink-0" aria-hidden="true" />
+                <span className="text-xs font-medium text-foreground">
+                  {citations.length} source{citations.length > 1 ? "s" : ""} used
+                </span>
+              </div>
+              {citationsExpanded ? (
+                <ChevronUp className="h-3.5 w-3.5 text-muted-foreground shrink-0" aria-hidden="true" />
+              ) : (
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" aria-hidden="true" />
+              )}
+            </button>
+
+            {/* Citation cards */}
+            {citationsExpanded && (
+              <div
+                id={`citations-${message.id}`}
+                className="px-3 pb-3 pt-1 grid gap-2 sm:grid-cols-2"
+              >
+                {citations.map((c, i) => (
+                  <CitationCard
+                    key={`${c.doc_id}-${c.page}-${i}`}
+                    citation={{
+                      doc_name: c.doc_name,
+                      doc_id: c.doc_id,
+                      page: c.page,
+                    }}
+                    compact
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Copy button */}
         {!isUser && !isStreaming && message.content && (
           <button
             onClick={handleCopy}
-            className="absolute -bottom-6 left-0 flex items-center gap-1 text-xs text-muted-foreground opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm px-1 py-0.5"
+            className="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground opacity-0 transition-opacity duration-200 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm px-1 py-0.5"
             title="Copy to clipboard"
             aria-label="Copy message to clipboard"
           >
             {copied ? (
               <>
-                <Check className="h-3 w-3" />
+                <Check className="h-3 w-3" aria-hidden="true" />
                 Copied
               </>
             ) : (
               <>
-                <Copy className="h-3 w-3" />
+                <Copy className="h-3 w-3" aria-hidden="true" />
                 Copy
               </>
             )}
@@ -177,7 +165,7 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
 
       {isUser && (
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary ring-1 ring-primary/30">
-          <User className="h-4 w-4 text-primary-foreground" />
+          <User className="h-4 w-4 text-primary-foreground" aria-hidden="true" />
         </div>
       )}
     </div>

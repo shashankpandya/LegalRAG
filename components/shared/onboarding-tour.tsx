@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Scale, HelpCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -56,6 +56,8 @@ export function OnboardingTour() {
   const [currentStep, setCurrentStep] = useState(0);
   const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const [highlightRect, setHighlightRect] = useState<DOMRect | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const completed = localStorage.getItem(ONBOARDING_KEY);
@@ -66,6 +68,43 @@ export function OnboardingTour() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Move focus into dialog when tour opens
+  useEffect(() => {
+    if (active) {
+      requestAnimationFrame(() => {
+        const btn = dialogRef.current?.querySelector<HTMLElement>("button");
+        btn?.focus();
+      });
+    } else {
+      triggerRef.current?.focus();
+    }
+  }, [active]);
+
+  // Trap focus inside tour dialog and handle Escape
+  function handleDialogKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Escape") {
+      skipTour();
+      return;
+    }
+    if (e.key !== "Tab") return;
+
+    const focusable = Array.from(
+      dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ) ?? [],
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
   function startTour() {
     setCurrentStep(0);
     setActive(true);
@@ -140,6 +179,7 @@ export function OnboardingTour() {
   return (
     <>
       <Button
+        ref={triggerRef}
         variant="ghost"
         size="icon"
         onClick={startTour}
@@ -148,13 +188,13 @@ export function OnboardingTour() {
         title="Help / Restart Tour"
         data-onboarding="help-button"
       >
-        <HelpCircle className="h-4 w-4" />
+        <HelpCircle className="h-4 w-4" aria-hidden="true" />
       </Button>
 
       {active && (
         <>
           <div
-            className="fixed inset-0 z-[100] bg-black/50 transition-opacity duration-300"
+            className="fixed inset-0 z-[100] bg-black/50 transition-opacity duration-200"
             aria-hidden="true"
           />
           {highlightRect && (
@@ -166,14 +206,17 @@ export function OnboardingTour() {
                 width: highlightRect.width + 8,
                 height: highlightRect.height + 8,
               }}
+              aria-hidden="true"
             />
           )}
           <div
-            className="fixed z-[102] w-[320px] animate-in fade-in-0 zoom-in-95 duration-300"
+            ref={dialogRef}
+            className="fixed z-[102] w-[320px] animate-in fade-in-0 zoom-in-95 duration-200"
             style={{ top: tooltipPos.top, left: tooltipPos.left }}
             role="dialog"
-            aria-label={`Tour step ${currentStep + 1} of ${steps.length}`}
+            aria-label={`Guided tour: step ${currentStep + 1} of ${steps.length} — ${step.title}`}
             aria-modal="true"
+            onKeyDown={handleDialogKeyDown}
           >
             <div className="rounded-xl border bg-card p-5 shadow-xl">
               <div className="flex items-start justify-between gap-2">

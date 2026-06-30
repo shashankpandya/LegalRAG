@@ -97,19 +97,30 @@ export function UploadDropzone() {
     [router],
   );
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, open: openFilePicker } = useDropzone({
     onDrop,
     accept: { "application/pdf": [".pdf"] },
     maxSize: MAX_SIZE,
     maxFiles: 1,
     disabled: uploading,
+    // Prevent dropzone from opening picker on click — we handle it ourselves
+    noClick: false,
+    noKeyboard: true, // We handle keyboard manually below
   });
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if ((e.key === "Enter" || e.key === " ") && !uploading) {
+      e.preventDefault();
+      openFilePicker();
+    }
+  }
 
   return (
     <div className="space-y-4">
       <div
         {...getRootProps()}
-        className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 sm:p-12 text-center transition-all duration-300 ${
+        onKeyDown={handleKeyDown}
+        className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 sm:p-12 text-center transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
           uploadStatus === "success"
             ? "border-green-500 bg-green-500/5"
             : isDragActive
@@ -120,9 +131,12 @@ export function UploadDropzone() {
                   ? "border-muted bg-muted/50 cursor-wait"
                   : "border-muted-foreground/25 hover:border-primary hover:bg-primary/5 hover:shadow-md"
         }`}
-        role="button"
-        aria-label="Upload PDF document"
-        tabIndex={0}
+        aria-label={
+          uploading
+            ? `Uploading ${fileName ?? "file"}…`
+            : "Upload PDF document — click or drag and drop"
+        }
+        tabIndex={uploading ? -1 : 0}
       >
         <input {...getInputProps()} aria-label="Choose PDF file" />
 

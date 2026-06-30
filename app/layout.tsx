@@ -3,7 +3,15 @@ import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({
+  subsets: ["latin"],
+  // Swap prevents invisible text during font load
+  display: "swap",
+  // Only load the weights we actually use
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-inter",
+  preload: true,
+});
 
 export const metadata: Metadata = {
   title: "LegalRAG — AI Compliance Co-pilot for Indian Startups",
@@ -17,7 +25,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={inter.variable}>
+      <head>
+        {/* Preconnect to Supabase for faster API calls */}
+        <link rel="preconnect" href="https://qfetgvjgcthtzrhrlmfx.supabase.co" />
+      </head>
       <body className={inter.className}>
         {children}
         <Toaster

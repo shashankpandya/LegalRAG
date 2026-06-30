@@ -111,23 +111,25 @@ export function SidebarChatItem({ chat }: SidebarChatItemProps) {
       >
         {chat.title}
       </Link>
-      {/* Hover actions */}
-      <div className="absolute right-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+      {/* Actions: visible on hover OR when any button inside is focused (keyboard accessible) */}
+      <div className="absolute right-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
         <button
           onClick={startEdit}
-          className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          aria-label="Rename chat"
+          className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          aria-label={`Rename "${chat.title}"`}
           title="Rename"
+          tabIndex={0}
         >
-          <Pencil className="h-2.5 w-2.5" />
+          <Pencil className="h-2.5 w-2.5" aria-hidden="true" />
         </button>
         <button
           onClick={handleDelete}
-          className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-          aria-label="Delete chat"
+          className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          aria-label={`Delete "${chat.title}"`}
           title="Delete"
+          tabIndex={0}
         >
-          <Trash2 className="h-2.5 w-2.5" />
+          <Trash2 className="h-2.5 w-2.5" aria-hidden="true" />
         </button>
       </div>
     </div>
