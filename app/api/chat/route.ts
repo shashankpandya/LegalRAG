@@ -168,7 +168,7 @@ export async function POST(req: Request) {
             );
           }
 
-          // Persist assistant message
+          // Persist assistant message — include snippet so it survives page reload
           await supabase.from("messages").insert({
             chat_id: chatId,
             role: "assistant",
@@ -177,6 +177,7 @@ export async function POST(req: Request) {
               doc_id: c.docId,
               doc_name: c.docName,
               page: c.page,
+              snippet: c.parentText.slice(0, 200),
             })),
           });
 

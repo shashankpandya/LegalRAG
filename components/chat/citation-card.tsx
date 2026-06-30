@@ -21,43 +21,40 @@ export function CitationCard({ citation, compact = false }: CitationCardProps) {
   return (
     <button
       onClick={() => setExpanded(!expanded)}
-      className={`flex items-start gap-2.5 rounded-lg border bg-card p-3 text-left transition-all duration-200 hover:bg-accent hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-        compact ? "max-w-[200px] w-full sm:w-auto" : "w-full max-w-md"
-      }`}
-      title={expanded ? "Click to collapse" : "Click to expand"}
+      className={`flex items-start gap-2.5 rounded-lg border bg-card p-2.5 text-left transition-all duration-200 hover:bg-accent hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 w-full`}
       aria-expanded={expanded}
-      aria-label={`Citation: ${citation.doc_name}, page ${citation.page}`}
+      aria-label={`Source: ${citation.doc_name}, page ${citation.page}. ${expanded ? "Click to collapse" : "Click to expand snippet"}`}
     >
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-        <BookOpen className="h-4 w-4 text-primary" />
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10">
+        <BookOpen className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <p className="font-medium text-sm truncate" title={citation.doc_name}>
+        <div className="flex items-start justify-between gap-1.5">
+          <p className="font-medium text-xs leading-snug truncate" title={citation.doc_name}>
             {citation.doc_name}
           </p>
-          <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
-            p. {citation.page}
+          <span className="text-[10px] px-1 py-0.5 rounded bg-muted text-muted-foreground shrink-0 tabular-nums">
+            p.{citation.page}
           </span>
         </div>
-        
+
         {expanded && citation.snippet && (
-          <p className="text-xs text-muted-foreground mt-2 leading-relaxed border-t pt-2">
+          <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed border-t pt-1.5 line-clamp-4">
             &ldquo;{citation.snippet}&rdquo;
           </p>
         )}
-        
+
         {!expanded && citation.snippet && (
-          <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-1">
+          <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed line-clamp-1 opacity-70">
             {citation.snippet}
           </p>
         )}
       </div>
-      <div className="shrink-0 mt-1">
+      <div className="shrink-0 mt-0.5">
         {expanded ? (
-          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+          <ChevronUp className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
         ) : (
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          <ChevronDown className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
         )}
       </div>
     </button>

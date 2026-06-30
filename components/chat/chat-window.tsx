@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { MessageBubble } from "./message-bubble";
 import { MessageInput } from "./message-input";
-import { CitationCard, type Citation } from "./citation-card";
+import { type Citation } from "./citation-card";
 import { Scale, AlertCircle, Loader2, WifiOff } from "lucide-react";
 import { useServiceHealth } from "@/lib/hooks/use-service-health";
 
@@ -13,7 +13,7 @@ interface Message {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
-  citations?: { doc_id: string; doc_name: string; page: number }[] | null;
+  citations?: { doc_id: string; doc_name: string; page: number; snippet?: string }[] | null;
   created_at: string;
 }
 
@@ -143,6 +143,7 @@ export function ChatWindow({
                 doc_id: c.doc_id,
                 doc_name: c.doc_name,
                 page: c.page,
+                snippet: c.snippet,
               })),
               created_at: new Date().toISOString(),
             };
@@ -191,6 +192,7 @@ export function ChatWindow({
               doc_id: c.doc_id,
               doc_name: c.doc_name,
               page: c.page,
+              snippet: c.snippet,
             })),
             created_at: new Date().toISOString(),
           };
@@ -292,16 +294,6 @@ export function ChatWindow({
 
         {isLoading && (
           <div className="animate-fade-up">
-            {citations.length > 0 && (
-              <div className="mb-3">
-                <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Sources</p>
-                <div className="flex gap-2 flex-wrap">
-                  {citations.map((c, i) => (
-                    <CitationCard key={i} citation={c} />
-                  ))}
-                </div>
-              </div>
-            )}
             <MessageBubble
               message={{
                 id: "streaming",

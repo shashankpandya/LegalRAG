@@ -3,8 +3,8 @@ import { type User } from "@supabase/supabase-js";
 import { signOut } from "@/lib/actions/auth";
 import { createNewChat } from "@/lib/actions/chats";
 import { Button } from "@/components/ui/button";
-import { OnboardingTour } from "@/components/shared/onboarding-tour";
 import { SidebarChatItem } from "@/components/shared/sidebar-chat-item";
+import dynamic from "next/dynamic";
 import {
   LayoutDashboard,
   MessageSquare,
@@ -14,6 +14,12 @@ import {
   Scale,
   Plus,
 } from "lucide-react";
+
+// Lazy-load — tour is never needed on first paint
+const OnboardingTour = dynamic(
+  () => import("@/components/shared/onboarding-tour").then((m) => ({ default: m.OnboardingTour })),
+  { ssr: false, loading: () => <div className="h-8 w-8" /> },
+);
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },

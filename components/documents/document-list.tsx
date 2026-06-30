@@ -26,25 +26,25 @@ function StatusBadge({ status, errorMessage }: { status: string; errorMessage?: 
   switch (status) {
     case "ready":
       return (
-        <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400">
-          <CheckCircle className="h-3 w-3" />
+        <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 dark:text-green-400">
+          <CheckCircle className="h-3 w-3" aria-hidden="true" />
           Ready
         </span>
       );
     case "failed":
       return (
         <span
-          className="inline-flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400"
+          className="inline-flex items-center gap-1 text-xs font-medium text-red-700 dark:text-red-400"
           title={errorMessage || "Ingestion failed — click Retry to try again"}
         >
-          <XCircle className="h-3 w-3" />
+          <XCircle className="h-3 w-3" aria-hidden="true" />
           Failed
         </span>
       );
     default:
       return (
-        <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400">
-          <Clock className="h-3 w-3 animate-spin" />
+        <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400">
+          <Clock className="h-3 w-3 animate-spin" aria-hidden="true" />
           Processing
         </span>
       );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Scale, SendHorizontal, Loader2, MessageSquare, Sparkles, Zap, ArrowRight, BookOpen, Shield, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -170,7 +171,7 @@ interface QuickActionCardProps {
 
 function QuickActionCard({ icon: Icon, title, description, href, gradient }: QuickActionCardProps) {
   return (
-    <a
+    <Link
       href={href}
       className="group interactive-item block animate-fade-up relative overflow-hidden"
       style={{ animationDelay: "150ms" }}
@@ -179,19 +180,19 @@ function QuickActionCard({ icon: Icon, title, description, href, gradient }: Qui
       <div className="relative">
         <div className="flex items-center gap-3 mb-3">
           <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${gradient} shadow-sm`}>
-            <Icon className="h-5 w-5 text-white" />
+            <Icon className="h-5 w-5 text-white" aria-hidden="true" />
           </div>
           <div>
             <h3 className="font-semibold text-base">{title}</h3>
           </div>
         </div>
         <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
-        <div className="flex items-center gap-1 mt-3 text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1 mt-3 text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden="true">
           <span>Get started</span>
           <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
         </div>
       </div>
-    </a>
+    </Link>
   );
 }
 
